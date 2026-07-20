@@ -1,0 +1,281 @@
+{
+  "entities": {
+    "Campaign": {
+      "title": "Campaign",
+      "description": "Social welfare and relief campaigns in Phu Loi ward.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "targetAmount", "currentAmount", "category"]
+    },
+    "JobListing": {
+      "title": "JobListing",
+      "description": "Local employment opportunities for disadvantaged residents.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "salary": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "requirements": { "type": "array" },
+        "contact": { "type": "string" }
+      },
+      "required": ["id", "title", "company", "salary", "location", "description", "requirements", "contact"]
+    },
+    "CitizenRequest": {
+      "title": "CitizenRequest",
+      "description": "Welfare assistance, medical insurance, or support requests from citizens.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "quarter": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "notes": { "type": "string" },
+        "rating": { "type": "number" },
+        "ratingComment": { "type": "string" },
+        "ratingOfficer": { "type": "string" },
+        "ratedAt": { "type": "string" },
+        "officerName": { "type": "string" }
+      },
+      "required": ["id", "fullName", "phone", "address", "quarter", "category", "description", "status", "createdAt"]
+    },
+    "Donation": {
+      "title": "Donation",
+      "description": "Contribution records made by donors.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "donorName": { "type": "string" },
+        "amount": { "type": "number" },
+        "campaignTitle": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "donorName", "amount", "campaignTitle", "message", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated digital profile for Phu Loi citizens.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "quarter": { "type": "string" },
+        "isVolunteer": { "type": "boolean" },
+        "volunteerQuarters": { "type": "array" }
+      },
+      "required": ["uid", "email", "fullName", "phone", "address", "quarter"]
+    },
+    "SlideshowImage": {
+      "title": "SlideshowImage",
+      "description": "Image in the slideshow album representing social welfare work.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "caption": { "type": "string" },
+        "url": { "type": "string" },
+        "date": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "required": ["id", "title", "caption", "url", "date", "source"]
+    },
+    "WebConfig": {
+      "title": "WebConfig",
+      "description": "General portal website configurations managed by system administrators.",
+      "type": "object",
+      "properties": {
+        "portalTitle": { "type": "string" },
+        "emergencyPhone": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "workingHours": { "type": "string" },
+        "announcementText": { "type": "string" },
+        "maintenanceMode": { "type": "boolean" }
+      },
+      "required": ["portalTitle", "emergencyPhone", "contactEmail", "workingHours", "announcementText", "maintenanceMode"]
+    },
+    "Survey": {
+      "title": "Survey",
+      "description": "Public opinion survey and feedback polls.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "options": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "votedUserIds": { "type": "array" }
+      },
+      "required": ["id", "title", "description", "category", "options", "createdAt", "createdBy"]
+    },
+    "VolunteerRegistration": {
+      "title": "VolunteerRegistration",
+      "description": "Volunteer registrations for community service events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "quarter": { "type": "string" },
+        "eventId": { "type": "string" },
+        "eventTitle": { "type": "string" },
+        "skills": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "fullName", "phone", "email", "quarter", "eventId", "eventTitle", "skills", "reason", "status", "createdAt"]
+    },
+    "FacebookNews": {
+      "title": "FacebookNews",
+      "description": "News and announcements published on the Portal.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "date": { "type": "string" },
+        "originalUrl": { "type": "string" },
+        "publishedAt": { "type": "string" },
+        "status": { "type": "string" },
+        "author": { "type": "string" }
+      },
+      "required": ["id", "title", "body", "category", "imageUrl", "date", "originalUrl"]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Local calendar events and ra-quan notices.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "iconName": { "type": "string" },
+        "color": { "type": "string" },
+        "textColor": { "type": "string" },
+        "bgColor": { "type": "string" }
+      },
+      "required": ["id", "title", "date", "time", "location", "type", "description"]
+    },
+    "OfficialPartner": {
+      "title": "OfficialPartner",
+      "description": "Sponsors and official partners of Phu Loi ward welfare services.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "role", "imageUrl"]
+    },
+    "PartyContribution": {
+      "title": "PartyContribution",
+      "description": "Citizen feedback and contributions for building the Party and political system.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "quarter": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "status": { "type": "string" },
+        "response": { "type": "string" },
+        "responseBy": { "type": "string" },
+        "respondedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "fullName", "category", "title", "content", "isAnonymous", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "facebook_news/{newsId}": {
+      "schema": "FacebookNews",
+      "description": "News and community announcements feed."
+    },
+    "events/{eventId}": {
+      "schema": "CalendarEvent",
+      "description": "Community action events calendar."
+    },
+    "official_partners/{partnerId}": {
+      "schema": "OfficialPartner",
+      "description": "Official sponsoring partners and welfare contributors."
+    },
+    "volunteerRegistrations/{registrationId}": {
+      "schema": "VolunteerRegistration",
+      "description": "Volunteer event registrations."
+    },
+    "surveys/{surveyId}": {
+      "schema": "Survey",
+      "description": "Citizen survey and local issue polling."
+    },
+    "config/{configId}": {
+      "schema": "WebConfig",
+      "description": "Portal configurations."
+    },
+    "slideshow/{imageId}": {
+      "schema": "SlideshowImage",
+      "description": "Slideshow gallery images."
+    },
+    "campaigns/{campaignId}": {
+      "schema": "Campaign",
+      "description": "Relief campaigns."
+    },
+    "jobs/{jobId}": {
+      "schema": "JobListing",
+      "description": "Employment opportunities."
+    },
+    "requests/{requestId}": {
+      "schema": "CitizenRequest",
+      "description": "Social assistance requests."
+    },
+    "partyContributions/{contributionId}": {
+      "schema": "PartyContribution",
+      "description": "Citizen feedback and contributions for building the Party and political system."
+    },
+    "donations/{donationId}": {
+      "schema": "Donation",
+      "description": "Donation records."
+    },
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User digital profiles."
+    }
+  }
+}

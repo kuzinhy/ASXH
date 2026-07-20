@@ -1,0 +1,367 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email != null && request.auth.token.email.lower() == "nguyenhuy.thudaumot@gmail.com") || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true)
+      );
+    }
+    function isOfficer() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isOfficer == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validate UserProfile
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'fullName', 'phone', 'address', 'quarter'])
+        && (data.keys().size() >= 6 && data.keys().size() <= 16)
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 300
+        && data.fullName is string && data.fullName.size() <= 200
+        && data.phone is string && data.phone.size() <= 100
+        && data.address is string && data.address.size() <= 500
+        && data.quarter is string && data.quarter.size() <= 100
+        && (!data.keys().hasAll(['isVolunteer']) || data.isVolunteer is bool)
+        && (!data.keys().hasAll(['volunteerQuarters']) || (data.volunteerQuarters is list && (data.volunteerQuarters.size() == 0 || data.volunteerQuarters[0] is string)))
+        && (!data.keys().hasAll(['isAdmin']) || data.isAdmin is bool)
+        && (!data.keys().hasAll(['isOfficer']) || data.isOfficer is bool)
+        && (!data.keys().hasAll(['officerQuarter']) || (data.officerQuarter is string && data.officerQuarter.size() <= 100))
+        && (!data.keys().hasAll(['badges']) || (data.badges is list && (data.badges.size() == 0 || data.badges[0] is string)))
+        && (!data.keys().hasAll(['systemBadges']) || data.systemBadges is list);
+    }
+
+    // Validate Campaign
+    function isValidCampaign(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'targetAmount', 'currentAmount', 'category'])
+        && (data.keys().size() == 6 || (data.keys().size() == 7 && data.keys().hasAll(['imageUrl'])))
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && (data.targetAmount is int || data.targetAmount is float)
+        && (data.currentAmount is int || data.currentAmount is float)
+        && data.category is string && data.category.size() <= 100
+        && (!data.keys().hasAll(['imageUrl']) || data.imageUrl is string);
+    }
+
+    // Validate JobListing
+    function isValidJob(data) {
+      return data.keys().hasAll(['id', 'title', 'company', 'salary', 'location', 'description', 'requirements', 'contact'])
+        && (data.keys().size() == 8 || (data.keys().size() == 9 && data.keys().hasAll(['imageUrl'])))
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.company is string && data.company.size() <= 200
+        && data.salary is string && data.salary.size() <= 100
+        && data.location is string && data.location.size() <= 500
+        && data.description is string && data.description.size() <= 2000
+        && data.requirements is list && data.requirements.size() <= 20 && (data.requirements.size() == 0 || data.requirements[0] is string)
+        && data.contact is string && data.contact.size() <= 200
+        && (!data.keys().hasAll(['imageUrl']) || data.imageUrl is string);
+    }
+
+    // Validate CitizenRequest
+    function isValidRequest(data) {
+      return data.keys().hasAll(['id', 'fullName', 'phone', 'address', 'quarter', 'category', 'description', 'status', 'createdAt'])
+        && data.keys().size() >= 9 && data.keys().size() <= 17
+        && data.id is string && data.id.size() <= 128
+        && data.fullName is string && data.fullName.size() <= 200
+        && data.phone is string && data.phone.size() <= 100
+        && data.address is string && data.address.size() <= 500
+        && data.quarter is string && data.quarter.size() <= 100
+        && data.category is string && data.category.size() <= 100
+        && data.description is string && data.description.size() <= 2000
+        && data.status is string && data.status.size() <= 100
+        && data.createdAt is string && data.createdAt.size() <= 100
+        && (!data.keys().hasAll(['notes']) || (data.notes is string && data.notes.size() <= 2000))
+        && (!data.keys().hasAll(['userId']) || (data.userId is string && data.userId.size() <= 128))
+        && (!data.keys().hasAll(['email']) || (data.email is string && data.email.size() <= 300))
+        && (!data.keys().hasAll(['rating']) || (data.rating is int || data.rating is float))
+        && (!data.keys().hasAll(['ratingComment']) || (data.ratingComment is string && data.ratingComment.size() <= 2000))
+        && (!data.keys().hasAll(['ratingOfficer']) || (data.ratingOfficer is string && data.ratingOfficer.size() <= 200))
+        && (!data.keys().hasAll(['ratedAt']) || (data.ratedAt is string && data.ratedAt.size() <= 100))
+        && (!data.keys().hasAll(['officerName']) || (data.officerName is string && data.officerName.size() <= 200));
+    }
+
+    // Validate Donation
+    function isValidDonation(data) {
+      return data.keys().hasAll(['id', 'donorName', 'amount', 'campaignTitle', 'message', 'createdAt'])
+        && (data.keys().size() == 6 || data.keys().size() == 7)
+        && data.id is string && data.id.size() <= 128
+        && data.donorName is string && data.donorName.size() <= 200
+        && (data.amount is int || data.amount is float) && data.amount > 0
+        && data.campaignTitle is string && data.campaignTitle.size() <= 200
+        && data.message is string && data.message.size() <= 2000
+        && data.createdAt is string && data.createdAt.size() <= 100
+        && (!data.keys().hasAll(['userId']) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // Validate SlideshowImage
+    function isValidSlideshowImage(data) {
+      return data.keys().hasAll(['id', 'title', 'caption', 'url', 'date', 'source'])
+        && data.keys().size() == 6
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.caption is string && data.caption.size() <= 2000
+        && data.url is string && data.url.size() <= 1000
+        && data.date is string && data.date.size() <= 100
+        && data.source is string && data.source.size() <= 100;
+    }
+
+    // Validate Survey
+    function isValidSurvey(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'category', 'options', 'createdAt', 'createdBy'])
+        && (data.keys().size() == 7 || data.keys().size() == 8)
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 500
+        && data.description is string && data.description.size() <= 4000
+        && data.category is string && data.category.size() <= 100
+        && data.options is list && data.options.size() <= 10
+        && data.createdAt is string && data.createdAt.size() <= 100
+        && data.createdBy is string && data.createdBy.size() <= 200
+        && (!data.keys().hasAll(['votedUserIds']) || (data.votedUserIds is list && data.votedUserIds.size() <= 10000));
+    }
+
+    // Validate VolunteerRegistration
+    function isValidVolunteerRegistration(data) {
+      return data.keys().hasAll(['id', 'fullName', 'phone', 'email', 'quarter', 'eventId', 'eventTitle', 'skills', 'reason', 'status', 'createdAt'])
+        && (data.keys().size() == 11 || data.keys().size() == 12)
+        && data.id is string && data.id.size() <= 128
+        && data.fullName is string && data.fullName.size() <= 200
+        && data.phone is string && data.phone.size() <= 100
+        && data.email is string && data.email.size() <= 300
+        && data.quarter is string && data.quarter.size() <= 100
+        && data.eventId is string && data.eventId.size() <= 128
+        && data.eventTitle is string && data.eventTitle.size() <= 300
+        && data.skills is string && data.skills.size() <= 1000
+        && data.reason is string && data.reason.size() <= 1000
+        && data.status is string && data.status.size() <= 100
+        && data.createdAt is string && data.createdAt.size() <= 100
+        && (!data.keys().hasAll(['userId']) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // Validate PartyContribution
+    function isValidPartyContribution(data) {
+      return data.keys().hasAll(['id', 'fullName', 'category', 'title', 'content', 'isAnonymous', 'status', 'createdAt'])
+        && data.keys().size() >= 8 && data.keys().size() <= 15
+        && data.id is string && data.id.size() <= 128
+        && data.fullName is string && data.fullName.size() <= 200
+        && data.category is string && data.category.size() <= 200
+        && data.title is string && data.title.size() <= 500
+        && data.content is string && data.content.size() <= 5000
+        && data.isAnonymous is bool
+        && data.status is string && data.status.size() <= 100
+        && data.createdAt is string && data.createdAt.size() <= 100
+        && (!data.keys().hasAll(['phone']) || (data.phone is string && data.phone.size() <= 100))
+        && (!data.keys().hasAll(['email']) || (data.email is string && data.email.size() <= 300))
+        && (!data.keys().hasAll(['quarter']) || (data.quarter is string && data.quarter.size() <= 100))
+        && (!data.keys().hasAll(['response']) || (data.response is string && data.response.size() <= 5000))
+        && (!data.keys().hasAll(['responseBy']) || (data.responseBy is string && data.responseBy.size() <= 200))
+        && (!data.keys().hasAll(['respondedAt']) || (data.respondedAt is string && data.respondedAt.size() <= 100))
+        && (!data.keys().hasAll(['userId']) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // Validate WebConfig
+    function isValidWebConfig(data) {
+      return data.keys().hasAll(['portalTitle', 'emergencyPhone', 'contactEmail', 'workingHours', 'announcementText', 'maintenanceMode', 'heroSubtitle', 'heroTitleLine1', 'heroTitleLine2', 'heroTitleLine3', 'heroDescription'])
+        && (data.keys().size() == 11 || data.keys().size() == 12)
+        && data.portalTitle is string && data.portalTitle.size() <= 200
+        && data.emergencyPhone is string && data.emergencyPhone.size() <= 100
+        && data.contactEmail is string && data.contactEmail.size() <= 200
+        && data.workingHours is string && data.workingHours.size() <= 200
+        && data.announcementText is string && data.announcementText.size() <= 4000
+        && data.maintenanceMode is bool
+        && data.heroSubtitle is string && data.heroSubtitle.size() <= 200
+        && data.heroTitleLine1 is string && data.heroTitleLine1.size() <= 200
+        && data.heroTitleLine2 is string && data.heroTitleLine2.size() <= 200
+        && data.heroTitleLine3 is string && data.heroTitleLine3.size() <= 200
+        && data.heroDescription is string && data.heroDescription.size() <= 2000
+        && (!data.keys().hasAll(['customCategories']) || data.customCategories is list);
+    }
+
+    // Validate PolicyDocument
+    function isValidPolicyDocument(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'category', 'agency', 'date', 'link'])
+        && data.keys().size() >= 7 && data.keys().size() <= 10
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 500
+        && data.description is string && data.description.size() <= 4000
+        && data.category is string && data.category.size() <= 200
+        && data.agency is string && data.agency.size() <= 300
+        && data.date is string && data.date.size() <= 100
+        && data.link is string && data.link.size() <= 1000
+        && (!data.keys().hasAll(['color']) || (data.color is string && data.color.size() <= 100))
+        && (!data.keys().hasAll(['bg']) || (data.bg is string && data.bg.size() <= 100))
+        && (!data.keys().hasAll(['border']) || (data.border is string && data.border.size() <= 100));
+    }
+
+    // Validate ForumPost
+    function isValidForumPost(data) {
+      return data.keys().hasAll(['id', 'title', 'content', 'authorName', 'category', 'status', 'createdAt'])
+        && data.keys().size() >= 7 && data.keys().size() <= 16
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 500
+        && data.content is string && data.content.size() <= 5000
+        && data.authorName is string && data.authorName.size() <= 200
+        && data.category is string && (data.category == 'Phản ánh' || data.category == 'Cần trợ giúp' || data.category == 'Thảo luận' || data.category == 'Góp ý')
+        && data.status is string && (data.status == 'Chờ xử lý' || data.status == 'Đang giải quyết' || data.status == 'Đã giải quyết')
+        && data.createdAt is string && data.createdAt.size() <= 100
+        && (!data.keys().hasAll(['authorId']) || (data.authorId is string && data.authorId.size() <= 128))
+        && (!data.keys().hasAll(['isApproved']) || data.isApproved is bool)
+        && (!data.keys().hasAll(['officialReply']) || (data.officialReply is string && data.officialReply.size() <= 5000))
+        && (!data.keys().hasAll(['resolvedBy']) || (data.resolvedBy is string && data.resolvedBy.size() <= 200))
+        && (!data.keys().hasAll(['resolvedAt']) || (data.resolvedAt is string && data.resolvedAt.size() <= 100))
+        && (!data.keys().hasAll(['updatedAt']) || (data.updatedAt is string && data.updatedAt.size() <= 100))
+        && (!data.keys().hasAll(['quarter']) || (data.quarter is string && data.quarter.size() <= 100))
+        && (!data.keys().hasAll(['likesCount']) || (data.likesCount is int || data.likesCount is float))
+        && (!data.keys().hasAll(['commentsCount']) || (data.commentsCount is int || data.commentsCount is float));
+    }
+
+    // Match users
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data)
+        && (!request.resource.data.keys().hasAll(['isAdmin']) || request.resource.data.isAdmin == false || request.auth.token.email.lower() == "nguyenhuy.thudaumot@gmail.com")
+        && (!request.resource.data.keys().hasAll(['isOfficer']) || request.resource.data.isOfficer == false);
+      allow update: if (isAdmin() && isValidUser(request.resource.data)) || (isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data)
+        && (
+          !request.resource.data.keys().hasAll(['isAdmin']) || 
+          (resource.data.keys().hasAll(['isAdmin']) && request.resource.data.isAdmin == resource.data.isAdmin) ||
+          (!resource.data.keys().hasAll(['isAdmin']) && request.resource.data.isAdmin == false)
+        )
+        && (
+          !request.resource.data.keys().hasAll(['isOfficer']) || 
+          (resource.data.keys().hasAll(['isOfficer']) && request.resource.data.isOfficer == resource.data.isOfficer) ||
+          (!resource.data.keys().hasAll(['isOfficer']) && request.resource.data.isOfficer == false)
+        ) );
+      allow list: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Match campaigns
+    match /campaigns/{campaignId} {
+      allow read: if true;
+      allow create, update: if (isAdmin() || isOfficer()) && isValidCampaign(request.resource.data);
+      allow delete: if isAdmin() || isOfficer();
+    }
+
+    // Match jobs
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create, update: if (isAdmin() || isOfficer()) && isValidJob(request.resource.data);
+      allow delete: if isAdmin() || isOfficer();
+    }
+
+    // Match requests
+    match /requests/{requestId} {
+      allow read: if true; // Temporarily allow read for UI, should be restricted later
+      allow create: if isValidRequest(request.resource.data);
+      allow update: if isAdmin() || isOfficer() || (isSignedIn() && request.auth.uid == resource.data.userId && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin() || isOfficer();
+    }
+
+    // Match partyContributions
+    match /partyContributions/{contributionId} {
+      allow read: if true;
+      allow create: if isValidPartyContribution(request.resource.data);
+      allow update: if isAdmin() || isOfficer();
+      allow delete: if isAdmin();
+    }
+
+    // Match donations
+    match /donations/{donationId} {
+      allow read: if true;
+      allow create: if isValidDonation(request.resource.data);
+      allow update: if isValidDonation(request.resource.data);
+      allow delete: if false;
+    }
+
+    // Match slideshow images
+    match /slideshow/{imageId} {
+      allow read: if true;
+      allow create, update: if isValidSlideshowImage(request.resource.data) && (isAdmin() || isOfficer());
+      allow delete: if isAdmin() || isOfficer();
+    }
+
+    // Match facebook news
+    match /news_articles/{newsId} {
+      allow read: if true;
+      allow write: if isAdmin() || isOfficer();
+    }
+
+    // Match official partners
+    match /official_partners/{partnerId} {
+      allow read: if true;
+      allow write: if isAdmin() || isOfficer();
+    }
+
+    // Match web config
+    match /config/{configId} {
+      allow read: if true;
+      allow create, update: if configId == 'visitor_stats';
+      allow create, update: if configId != 'visitor_stats' && isValidWebConfig(request.resource.data) && isAdmin();
+      allow delete: if false;
+    }
+
+    // Match events
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin() || isOfficer();
+    }
+
+    // Match surveys
+    match /surveys/{surveyId} {
+      allow read: if true;
+      allow create, delete: if (isAdmin() || isOfficer()) && isValidSurvey(request.resource.data);
+      allow update: if (isAdmin() || isOfficer() || isSignedIn()) && isValidSurvey(request.resource.data);
+    }
+
+    // Match volunteer registrations
+    match /volunteerRegistrations/{registrationId} {
+      allow read: if true;
+      allow create: if isValidVolunteerRegistration(request.resource.data);
+      allow update: if isAdmin() || isOfficer() || (isSignedIn() && request.auth.uid == resource.data.userId && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin();
+    }
+
+    // Match visitor stats
+    match /visitor_stats/{statId} {
+      allow read, write: if true;
+    }
+
+    // Match brain documents for assistant
+    match /brain_documents/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Match system badges for users
+    match /system_badges/{badgeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Match policy documents
+    match /policyDocuments/{docId} {
+      allow read: if true;
+      allow write: if (isAdmin() || isOfficer()) && isValidPolicyDocument(request.resource.data);
+    }
+
+    // Match forum posts
+    match /forum_posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidForumPost(request.resource.data);
+      allow update: if (isAdmin() || isOfficer() || (isSignedIn() && request.auth.uid == resource.data.authorId)) && isValidForumPost(request.resource.data);
+      allow delete: if isAdmin() || isOfficer() || (isSignedIn() && request.auth.uid == resource.data.authorId);
+    }
+  }
+}

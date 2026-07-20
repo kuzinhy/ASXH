@@ -1,0 +1,6 @@
+{
+  "name": "Cổng An Sinh Xã Hội Số Phường Phú Lợi - Thành phố Hồ Chí Minh",
+  "description": "Cổng thông tin và dịch vụ an sinh xã hội số phường Phú Lợi, Thành phố Hồ Chí Minh.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
