@@ -7,6 +7,7 @@ import {
 import { NewsArticle, UserProfile } from "../types";
 import { incrementUserShares } from "../lib/firebaseSync";
 import ShareModal from "./ShareModal";
+import NewsDetailModal from "./NewsDetailModal";
 
 interface NewsArticleFeedProps {
   news: NewsArticle[];
@@ -25,6 +26,17 @@ export default function NewsArticleFeed({
 }: NewsArticleFeedProps) {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedShareNews, setSelectedShareNews] = useState<NewsArticle | null>(null);
+
+  // States for full-text detailed news modal
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedDetailNews, setSelectedDetailNews] = useState<NewsArticle | null>(null);
+
+  // Handle opening the detailed news modal
+  const handleArticleClick = (item: NewsArticle) => {
+    setSelectedDetailNews(item);
+    setIsDetailOpen(true);
+    recordNewsRead();
+  };
 
   // Handle opening the customized Share modal
   const handleShareClick = (item: NewsArticle) => {
@@ -83,7 +95,9 @@ export default function NewsArticleFeed({
                 <article
                   key={`${item.id}-${idx}`}
                   id={`news-card-${item.id}`}
-                  className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden flex hover:bg-white hover:shadow-md transition-all duration-300 shrink-0"
+                  onClick={() => handleArticleClick(item)}
+                  className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden flex hover:bg-white hover:shadow-lg hover:scale-[1.015] transition-all duration-300 shrink-0 cursor-pointer transform"
+                  title="Bấm để xem chi tiết đầy đủ của bản tin này"
                 >
                   {/* News Media Thumbnail */}
                   <div className="relative w-28 sm:w-36 shrink-0 bg-slate-200 overflow-hidden">
@@ -122,7 +136,10 @@ export default function NewsArticleFeed({
                       <div className="flex items-center space-x-4">
                         {/* Share button */}
                         <button
-                          onClick={() => handleShareClick(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShareClick(item);
+                          }}
                           className="flex items-center space-x-1.5 text-[9px] font-bold text-blue-900 hover:text-blue-700 uppercase tracking-wider transition-colors cursor-pointer"
                           title="Bấm chia sẻ bài viết này qua Facebook, Zalo, hoặc sao chép liên kết"
                         >
@@ -133,7 +150,10 @@ export default function NewsArticleFeed({
                         {/* Bookmark / Yêu thích button */}
                         {onToggleBookmarkNews && (
                           <button
-                            onClick={() => onToggleBookmarkNews(item.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleBookmarkNews(item.id);
+                            }}
                             className={`flex items-center space-x-1 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                               bookmarkedNewsIds.includes(item.id)
                                 ? "text-amber-500 hover:text-amber-600"
@@ -152,7 +172,10 @@ export default function NewsArticleFeed({
                         href={item.originalUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={recordNewsRead}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          recordNewsRead();
+                        }}
                         className="text-[9px] font-medium text-slate-400 hover:text-blue-900 flex items-center space-x-1 transition-colors bg-white px-2 py-1 rounded-md shadow-sm border border-slate-100"
                       >
                         <span>Xem bài gốc</span>
@@ -180,6 +203,24 @@ export default function NewsArticleFeed({
           shareText={selectedShareNews.body}
           shareUrl={`${window.location.origin}${window.location.pathname}?newsId=${selectedShareNews.id}`}
           showToast={showToast}
+        />
+      )}
+
+      {/* News Article Detail Modal */}
+      {selectedDetailNews && (
+        <NewsDetailModal
+          isOpen={isDetailOpen}
+          onClose={() => {
+            setIsDetailOpen(false);
+            setSelectedDetailNews(null);
+          }}
+          article={selectedDetailNews}
+          currentUser={currentUser}
+          isBookmarked={bookmarkedNewsIds.includes(selectedDetailNews.id)}
+          onToggleBookmark={() => onToggleBookmarkNews?.(selectedDetailNews.id)}
+          onShareClick={() => {
+            handleShareClick(selectedDetailNews);
+          }}
         />
       )}
     </div>

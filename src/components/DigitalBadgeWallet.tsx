@@ -173,7 +173,11 @@ export default function DigitalBadgeWallet({ currentUser, onNavigateTab, showToa
     async function checkRegistrations() {
       try {
         const regs = await fetchVolunteerRegistrationsFromFirestore();
-        const mine = regs.filter(r => r.userId === uid || r.phone === currentUser.phone);
+        const mine = regs.filter(r => 
+          r.userId === uid || 
+          r.phone === currentUser.phone || 
+          (currentUser.email && r.email?.toLowerCase() === currentUser.email.toLowerCase())
+        );
         setEventsRegistered(mine.length);
       } catch (err) {
         console.error("Lỗi lấy số lượng đăng ký sự kiện:", err);

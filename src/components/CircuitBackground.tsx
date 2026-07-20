@@ -92,7 +92,7 @@ export default function CircuitBackground() {
           size: Math.random() * 40 + 50, // 50px to 90px size
           rotation: Math.random() * Math.PI * 2,
           rotSpeed: (Math.random() - 0.5) * 0.002, // Subtle slow rotating speed
-          opacity: Math.random() * 0.12 + 0.18, // Visible yet elegant background watermark level
+          opacity: Math.random() * 0.04 + 0.04, // Very soft and elegant watermark opacity (4% to 8%)
         });
       }
     };

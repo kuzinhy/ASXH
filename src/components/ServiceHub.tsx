@@ -10,7 +10,7 @@ import {
   Coins, HelpCircle, Send, CheckCircle2, FileText, ChevronRight,
   Sparkles, Gift, Printer, ArrowRight, UserCheck, Calendar, Landmark,
   Edit3, Save, LogIn, Plus, HeartHandshake, MapPin, Phone, Mail, Trophy, X,
-  Lock, User, Check, Sliders, Activity, TrendingUp, Vote, Bookmark, Share2, Star
+  Lock, User, Check, Sliders, Activity, TrendingUp, Vote, Bookmark, Share2, Star, Settings
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import html2canvas from "html2canvas";
@@ -530,6 +530,7 @@ export default function ServiceHub({
   // Volunteer form state
   const [selectedVolunteerQuarters, setSelectedVolunteerQuarters] = useState<string[]>([]);
   const [volunteerSaving, setVolunteerSaving] = useState(false);
+  const [isEditingVolunteerQuarters, setIsEditingVolunteerQuarters] = useState(false);
 
   // Volunteer Community Case Report form state
   const [volReportName, setVolReportName] = useState("");
@@ -566,6 +567,8 @@ export default function ServiceHub({
       };
       await updateUserProfileInFirestore(currentUser.uid, updatedProfile);
       localStorage.setItem("phuloi_user", JSON.stringify(updatedProfile));
+      localStorage.setItem("phuloi_current_user", JSON.stringify(updatedProfile));
+      sessionStorage.setItem("phuloi_current_user", JSON.stringify(updatedProfile));
       setProfileSuccess("Đăng ký gia nhập Đội ngũ Tình nguyện viên Phú Lợi thành công!");
       setTimeout(() => {
         window.location.reload();
@@ -573,6 +576,32 @@ export default function ServiceHub({
     } catch (err) {
       console.error(err);
       setProfileError("Lỗi kết nối. Không thể đăng ký tình nguyện viên.");
+    } finally {
+      setVolunteerSaving(false);
+    }
+  };
+
+  const handleUpdateVolunteerQuarters = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    setVolunteerSaving(true);
+    try {
+      const updatedProfile = {
+        ...currentUser,
+        volunteerQuarters: selectedVolunteerQuarters.length > 0 ? selectedVolunteerQuarters : [currentUser.quarter]
+      };
+      await updateUserProfileInFirestore(currentUser.uid, updatedProfile);
+      localStorage.setItem("phuloi_user", JSON.stringify(updatedProfile));
+      localStorage.setItem("phuloi_current_user", JSON.stringify(updatedProfile));
+      sessionStorage.setItem("phuloi_current_user", JSON.stringify(updatedProfile));
+      setProfileSuccess("Cập nhật địa điểm hỗ trợ thành công!");
+      setIsEditingVolunteerQuarters(false);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setProfileError("Lỗi kết nối. Không thể cập nhật địa điểm hỗ trợ.");
     } finally {
       setVolunteerSaving(false);
     }
@@ -2628,13 +2657,67 @@ export default function ServiceHub({
                           </div>
                           <div>
                             <h4 className="font-bold text-sm font-sans">Đồng hành cùng Phú Lợi</h4>
-                            <p className="text-slate-800 text-[10px] leading-relaxed mt-1 font-semibold">
+                            <p className="text-white/90 text-[10px] leading-relaxed mt-1 font-medium">
                               Cảm ơn tấm lòng vàng của anh/chị đã tự nguyện góp sức vì cuộc sống tốt đẹp hơn của người nghèo.
                             </p>
                           </div>
-                          <div className="pt-2 border-t border-slate-950/10 text-[10px] font-semibold">
-                            <span className="text-slate-800">Khu vực hỗ trợ:</span> {currentUser.volunteerQuarters?.join(", ") || currentUser.quarter}
-                          </div>
+                          
+                          {isEditingVolunteerQuarters ? (
+                            <form onSubmit={handleUpdateVolunteerQuarters} className="space-y-3 pt-2 border-t border-white/20">
+                              <label className="block text-[9px] font-bold text-white/95 uppercase mb-1">Thay đổi địa điểm hỗ trợ</label>
+                              <div className="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto p-2 bg-white/10 rounded-xl border border-white/10 custom-scrollbar">
+                                {QUARTERS_LIST.map(kp => (
+                                  <label key={kp.id} className="flex items-center space-x-1.5 text-[10px] font-semibold text-white/90 cursor-pointer hover:text-white">
+                                    <input 
+                                      type="checkbox"
+                                      checked={selectedVolunteerQuarters.includes(kp.name)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedVolunteerQuarters(prev => [...prev, kp.name]);
+                                        } else {
+                                          setSelectedVolunteerQuarters(prev => prev.filter(item => item !== kp.name));
+                                        }
+                                      }}
+                                      className="rounded text-blue-600 focus:ring-blue-500 w-3 h-3 cursor-pointer bg-white/20 border-white/30"
+                                    />
+                                    <span>{kp.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                              <div className="flex space-x-2 pt-1">
+                                <button
+                                  type="submit"
+                                  disabled={volunteerSaving}
+                                  className="flex-1 bg-white text-blue-700 font-bold py-1.5 rounded-lg text-[10px] cursor-pointer shadow-sm hover:bg-blue-50 transition-colors"
+                                >
+                                  {volunteerSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedVolunteerQuarters(currentUser.volunteerQuarters || [currentUser.quarter]);
+                                    setIsEditingVolunteerQuarters(false);
+                                  }}
+                                  className="px-3 bg-white/20 text-white font-bold py-1.5 rounded-lg text-[10px] cursor-pointer hover:bg-white/30 transition-colors"
+                                >
+                                  Hủy
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <div className="pt-2 border-t border-white/20 text-[10px] space-y-2">
+                              <div className="font-semibold">
+                                <span className="text-white/80">Khu vực hỗ trợ:</span> {currentUser.volunteerQuarters?.join(", ") || currentUser.quarter}
+                              </div>
+                              <button
+                                onClick={() => setIsEditingVolunteerQuarters(true)}
+                                className="inline-flex items-center space-x-1 text-white bg-white/10 px-2.5 py-1 rounded-lg text-[10px] font-bold hover:bg-white/20 transition-all cursor-pointer"
+                              >
+                                <Settings className="w-3 h-3" />
+                                <span>Thay đổi địa điểm</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -4614,7 +4697,11 @@ function CitizenVolunteerList({ currentUser }: CitizenVolunteerListProps) {
     async function load() {
       try {
         const all = await fetchVolunteerRegistrationsFromFirestore();
-        const mine = all.filter(reg => reg.userId === currentUser.uid || reg.phone === currentUser.phone);
+        const mine = all.filter(reg => 
+          reg.userId === currentUser.uid || 
+          reg.phone === currentUser.phone || 
+          (currentUser.email && reg.email?.toLowerCase() === currentUser.email.toLowerCase())
+        );
         setRegistrations(mine);
       } catch (err) {
         console.error(err);

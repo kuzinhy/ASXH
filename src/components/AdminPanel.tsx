@@ -8,15 +8,15 @@ import { ShieldCheck, ShieldAlert, Users, Settings, Sliders, Activity, ChevronDo
   MapPin, Phone, Mail, Clock, RefreshCw, AlertCircle, FileText, Gift, Briefcase, CheckCircle2,
   BellRing, Download, Globe, Link2, Loader2, Calendar, Award, Trophy, Star,
   MessageSquare, Copy, ExternalLink, Send, Search, Archive, Eye, Filter,
-  Vote, Edit3, Sparkles, ImagePlus } from "lucide-react";
+  Vote, Edit3, Sparkles, ImagePlus, HeartHandshake, UserCheck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { UserProfile, WebConfig, Campaign, JobListing, CitizenRequest, SupportCategory, RequestStatus, NewsArticle, OfficialPartner, SystemBadge, UserBadgeInfo, PartyContribution, CalendarEvent } from "../types";
+import { UserProfile, WebConfig, Campaign, JobListing, CitizenRequest, SupportCategory, RequestStatus, NewsArticle, OfficialPartner, SystemBadge, UserBadgeInfo, PartyContribution, CalendarEvent, VolunteerRegistration } from "../types";
 import AdminForumPanel from "./AdminForumPanel";
 import ProfileModal from "./ProfileModal";
 import PushNotificationCenter from "./PushNotificationCenter";
 import ConfirmDialog from "./ConfirmDialog";
 import { QUARTERS_LIST } from "../constants";
-import { fetchAllUserProfiles, updateUserProfileInFirestore, fetchWebConfig, saveWebConfig, DEFAULT_WEB_CONFIG, saveCampaignToFirestore, deleteCampaignFromFirestore, saveJobToFirestore, deleteJobFromFirestore, updateRequestInFirestore, fetchSystemBadges, saveSystemBadge, deleteSystemBadge, OperationType, saveEventToFirestore, deleteEventFromFirestore, savePolicyDocumentToFirestore, deletePolicyDocumentFromFirestore } from "../lib/firebaseSync";
+import { fetchAllUserProfiles, updateUserProfileInFirestore, fetchWebConfig, saveWebConfig, DEFAULT_WEB_CONFIG, saveCampaignToFirestore, deleteCampaignFromFirestore, saveJobToFirestore, deleteJobFromFirestore, updateRequestInFirestore, fetchSystemBadges, saveSystemBadge, deleteSystemBadge, OperationType, saveEventToFirestore, deleteEventFromFirestore, savePolicyDocumentToFirestore, deletePolicyDocumentFromFirestore, fetchVolunteerRegistrationsFromFirestore, updateVolunteerRegistrationStatusInFirestore } from "../lib/firebaseSync";
 import { googleSignIn, getAccessToken } from "../lib/googleAuth";
 import { sendSmsNotification, sendEmailNotification } from "../lib/email";
 import { auth } from "../lib/firebase";
@@ -59,7 +59,7 @@ interface AdminPanelProps {
   onUpdatePartyContribution?: (id: string, updates: Partial<PartyContribution>) => Promise<void>;
 }
 
-type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "brain" | "partners" | "partyFeedback" | "aiPersonality";
+type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "brain" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers" | "imageUpload";
 
 
 interface ActivityLog {
@@ -426,6 +426,90 @@ export default function AdminPanel({
   useEffect(() => {
     setRequestsList(allRequests);
   }, [allRequests]);
+
+  // States for local volunteer review panel
+  const [volunteerRegistrations, setVolunteerRegistrations] = useState<VolunteerRegistration[]>([]);
+  const [loadingVolunteers, setLoadingVolunteers] = useState(false);
+  const [volunteerStatusFilter, setVolunteerStatusFilter] = useState<string>("Tất cả");
+  const [volunteerSearchText, setVolunteerSearchText] = useState<string>("");
+  const [volunteerQuarterFilter, setVolunteerQuarterFilter] = useState<string>("Tất cả");
+  const [expandedVolunteerId, setExpandedVolunteerId] = useState<string | null>(null);
+  const [volunteerSubTab, setVolunteerSubTab] = useState<"registrations" | "all_volunteers">("registrations");
+
+  const loadVolunteerRegistrations = async () => {
+    setLoadingVolunteers(true);
+    try {
+      const regs = await fetchVolunteerRegistrationsFromFirestore();
+      regs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      setVolunteerRegistrations(regs);
+    } catch (err) {
+      console.error("Error fetching volunteer registrations:", err);
+    } finally {
+      setLoadingVolunteers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "volunteers") {
+      loadVolunteerRegistrations();
+    }
+  }, [activeTab]);
+
+  const handleUpdateVolunteerStatus = async (reg: VolunteerRegistration, newStatus: "Chờ duyệt" | "Đã duyệt" | "Đã từ chối") => {
+    try {
+      showFeedback(`Đang cập nhật trạng thái hồ sơ của ${reg.fullName}...`);
+      await updateVolunteerRegistrationStatusInFirestore(reg.id, newStatus);
+      
+      // Update locally
+      setVolunteerRegistrations(prev => prev.map(item => item.id === reg.id ? { ...item, status: newStatus } : item));
+      
+      // Upgrade user profile isVolunteer & quarters if approved
+      if (newStatus === "Đã duyệt" && reg.userId) {
+        const foundUser = users.find(u => u.uid === reg.userId);
+        if (foundUser) {
+          const updatedProfile: UserProfile = {
+            ...foundUser,
+            isVolunteer: true,
+            volunteerQuarters: Array.from(new Set([...(foundUser.volunteerQuarters || []), reg.quarter || foundUser.quarter || "Khu phố 1"]))
+          };
+          await updateUserProfileInFirestore(updatedProfile.uid, updatedProfile);
+          // Update local users array
+          setUsers(prev => prev.map(u => u.uid === reg.userId ? updatedProfile : u));
+          
+          // Try sending email notification to volunteer
+          try {
+            await sendEmailNotification(
+              reg.email,
+              "Chúc mừng! Đơn đăng ký Tình nguyện viên của bạn đã được phê duyệt",
+              `Chào ${reg.fullName},\n\nỦy ban MTTQ Việt Nam Phường Phú Lợi, Thành phố Hồ Chí Minh xin thông báo đơn đăng ký tham gia hoạt động "${reg.eventTitle}" của bạn đã được PHÊ DUYỆT thành công.\n\nVai trò Tình nguyện viên của bạn đã được kích hoạt chính thức trên Cổng An Sinh Xã Hội Số Phường Phú Lợi.\n\nThông tin liên hệ hỗ trợ: 0909112233.\nĐịa chỉ: Số 171 Huỳnh Văn Lũy, Phường Phú Lợi, Thành phố Hồ Chí Minh.`
+            );
+          } catch (err) {
+            console.warn("Could not send email notification:", err);
+          }
+          
+          showFeedback(`Đã phê duyệt hồ sơ & kích hoạt vai trò Tình nguyện viên cho ${reg.fullName}!`);
+        } else {
+          showFeedback(`Đã duyệt thành công hồ sơ sự kiện của ${reg.fullName}!`);
+        }
+      } else if (newStatus === "Đã từ chối" && reg.userId) {
+        try {
+          await sendEmailNotification(
+            reg.email,
+            "Thông báo kết quả đăng ký Tình nguyện viên Phường Phú Lợi",
+            `Chào ${reg.fullName},\n\nCảm ơn bạn đã quan tâm đăng ký tham gia hoạt động tình nguyện "${reg.eventTitle}".\n\nRất tiếc, do số lượng đăng ký đã đủ hoặc hồ sơ chưa phù hợp tại thời điểm này, chúng tôi chưa thể phê duyệt yêu cầu của bạn.\n\nHy vọng sẽ được đồng hành cùng bạn trong các chương trình an sinh xã hội tiếp theo.\n\nỦy ban MTTQ Việt Nam Phường Phú Lợi, Thành phố Hồ Chí Minh.`
+          );
+        } catch (err) {
+          console.warn("Could not send rejection email:", err);
+        }
+        showFeedback(`Đã từ chối đơn đăng ký của ${reg.fullName}`);
+      } else {
+        showFeedback(`Đã chuyển trạng thái đơn sang: ${newStatus}`);
+      }
+    } catch (error: any) {
+      console.error(error);
+      showFeedback(`Lỗi khi xét duyệt hồ sơ: ${error.message || error}`, true);
+    }
+  };
 
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingJob, setEditingJob] = useState<JobListing | null>(null);
@@ -6708,6 +6792,477 @@ export default function AdminPanel({
                             </div>
                           )}
                         </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeTab === "volunteers" && (
+                    <motion.div
+                      key="volunteers"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-6"
+                    >
+                      {/* Modern Banner Header */}
+                      <div className="bg-gradient-to-r from-rose-500 to-pink-600 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+                        <div className="absolute right-0 bottom-0 opacity-15 translate-x-10 translate-y-10 scale-150">
+                          <HeartHandshake className="w-64 h-64" />
+                        </div>
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                          <div className="space-y-2">
+                            <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">Phân hệ xét duyệt</span>
+                            <h2 className="text-2xl md:text-3xl font-black tracking-tight font-sans">
+                              Xét duyệt Tình nguyện viên Hỗ trợ Địa phương
+                            </h2>
+                            <p className="text-white/80 text-xs md:text-sm font-light max-w-xl font-sans">
+                              Thẩm định hồ sơ công dân đăng ký tham gia các hoạt động tình nguyện, cứu trợ, bảo vệ môi trường và hỗ trợ cộng đồng tại Phường Phú Lợi, Thành phố Hồ Chí Minh.
+                            </p>
+                          </div>
+                          
+                          <button
+                            onClick={loadVolunteerRegistrations}
+                            disabled={loadingVolunteers}
+                            className="bg-white hover:bg-rose-50 text-rose-600 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-75 self-start md:self-center"
+                          >
+                            <RefreshCw className={`w-4 h-4 ${loadingVolunteers ? "animate-spin" : ""}`} />
+                            <span>Tải lại danh sách</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Sub-tab selection */}
+                      <div className="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-2xl w-fit font-sans border border-slate-200/50 shadow-inner">
+                        <button
+                          onClick={() => setVolunteerSubTab("registrations")}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                            volunteerSubTab === "registrations"
+                              ? "bg-white text-rose-600 shadow-xs border border-slate-200/40"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Đơn đăng ký sự kiện ({volunteerRegistrations.length})</span>
+                        </button>
+                        <button
+                          onClick={() => setVolunteerSubTab("all_volunteers")}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                            volunteerSubTab === "all_volunteers"
+                              ? "bg-white text-rose-600 shadow-xs border border-slate-200/40"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Tất cả Tình nguyện viên của Phường ({users.filter(u => u.isVolunteer).length})</span>
+                        </button>
+                      </div>
+
+                      {/* Statistics Summary Cards */}
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                            <HeartHandshake className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tổng đơn đăng ký</div>
+                            <div className="text-xl font-extrabold text-slate-800">{volunteerRegistrations.length}</div>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                            <Clock className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chờ xét duyệt</div>
+                            <div className="text-xl font-extrabold text-amber-600">
+                              {volunteerRegistrations.filter(r => r.status === "Chờ duyệt").length}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                            <Check className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Đã phê duyệt</div>
+                            <div className="text-xl font-extrabold text-emerald-600">
+                              {volunteerRegistrations.filter(r => r.status === "Đã duyệt").length}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                            <X className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Đã từ chối</div>
+                            <div className="text-xl font-extrabold text-rose-600">
+                              {volunteerRegistrations.filter(r => r.status === "Đã từ chối").length}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Filters and Search Bar */}
+                      <div className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          {/* Search Input */}
+                          <div className="relative flex-1">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="Tìm kiếm theo Tên, Số điện thoại hoặc Email tình nguyện viên..."
+                              value={volunteerSearchText}
+                              onChange={(e) => setVolunteerSearchText(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all text-slate-800"
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            {/* Quarter Filter */}
+                            <div className="flex items-center space-x-2">
+                              <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider">Khu phố:</span>
+                              <select
+                                value={volunteerQuarterFilter}
+                                onChange={(e) => setVolunteerQuarterFilter(e.target.value)}
+                                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-rose-500 text-slate-700"
+                              >
+                                <option value="Tất cả">Tất cả Khu phố</option>
+                                {QUARTERS_LIST.map((kp, idx) => (
+                                  <option key={idx} value={kp.name}>{kp.name}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Status Tabs */}
+                            {volunteerSubTab === "registrations" && (
+                              <div className="bg-slate-100 p-1 rounded-xl flex items-center space-x-1">
+                                {["Tất cả", "Chờ duyệt", "Đã duyệt", "Đã từ chối"].map((status) => (
+                                  <button
+                                    key={status}
+                                    onClick={() => setVolunteerStatusFilter(status)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                      volunteerStatusFilter === status
+                                        ? "bg-white text-rose-600 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                                  >
+                                    {status}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* List/Table Area */}
+                        {loadingVolunteers ? (
+                          <div className="py-12 flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
+                            <span className="text-xs font-semibold text-slate-400">Đang tải danh sách hồ sơ đăng ký...</span>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                            {volunteerSubTab === "registrations" ? (
+                              <table className="w-full text-left border-collapse text-xs">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider font-sans">
+                                    <th className="p-4">Mã Đơn / Ngày gửi</th>
+                                    <th className="p-4">Tình nguyện viên</th>
+                                    <th className="p-4">Địa bàn (Khu phố)</th>
+                                    <th className="p-4">Sự kiện / Hoạt động</th>
+                                    <th className="p-4 text-center">Trạng thái</th>
+                                    <th className="p-4 text-right">Thao tác</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                                  {volunteerRegistrations
+                                    .filter(reg => {
+                                      const matchStatus = volunteerStatusFilter === "Tất cả" || reg.status === volunteerStatusFilter;
+                                      const matchQuarter = volunteerQuarterFilter === "Tất cả" || reg.quarter === volunteerQuarterFilter;
+                                      const matchSearch = 
+                                        !volunteerSearchText ||
+                                        reg.fullName.toLowerCase().includes(volunteerSearchText.toLowerCase()) ||
+                                        reg.phone.includes(volunteerSearchText) ||
+                                        (reg.email && reg.email.toLowerCase().includes(volunteerSearchText.toLowerCase())) ||
+                                        reg.eventTitle.toLowerCase().includes(volunteerSearchText.toLowerCase());
+                                      return matchStatus && matchQuarter && matchSearch;
+                                    })
+                                    .map((reg, idx) => {
+                                      const isExpanded = expandedVolunteerId === reg.id;
+                                      return (
+                                        <React.Fragment key={reg.id}>
+                                          <tr className={`hover:bg-slate-50/50 transition-colors ${isExpanded ? "bg-slate-50/30" : ""}`}>
+                                            <td className="p-4">
+                                              <div className="font-extrabold text-slate-900">{reg.id}</div>
+                                              <div className="text-[10px] text-slate-400 mt-1 font-light">
+                                                {new Date(reg.createdAt).toLocaleDateString("vi-VN")} {new Date(reg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                                              </div>
+                                            </td>
+                                            <td className="p-4">
+                                              <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5 font-sans">
+                                                {reg.fullName}
+                                                {reg.userId && (
+                                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title="Tài khoản liên kết chính thức" />
+                                                )}
+                                              </div>
+                                              <div className="text-slate-500 text-[11px] mt-1 font-light">
+                                                SĐT: <span className="font-semibold text-slate-700">{reg.phone}</span> • Email: <span className="text-slate-600 font-normal">{reg.email}</span>
+                                              </div>
+                                            </td>
+                                            <td className="p-4">
+                                              <span className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-full text-[10px] font-black uppercase text-slate-600 tracking-wider">
+                                                {reg.quarter || "Địa bàn Phường"}
+                                              </span>
+                                            </td>
+                                            <td className="p-4">
+                                              <div className="font-bold text-slate-800 line-clamp-1 font-sans" title={reg.eventTitle}>
+                                                {reg.eventTitle}
+                                              </div>
+                                              <div className="text-[10px] text-slate-400 mt-1 font-light">
+                                                Mã SK: {reg.eventId}
+                                              </div>
+                                            </td>
+                                            <td className="p-4 text-center">
+                                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                                reg.status === "Đã duyệt"
+                                                  ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                                  : reg.status === "Đã từ chối"
+                                                  ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                                  : "bg-amber-50 text-amber-600 border border-amber-100 animate-pulse"
+                                              }`}>
+                                                {reg.status}
+                                              </span>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                              <div className="flex items-center justify-end space-x-2">
+                                                {/* Toggle Detail Row */}
+                                                <button
+                                                  onClick={() => setExpandedVolunteerId(isExpanded ? null : reg.id)}
+                                                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold transition cursor-pointer"
+                                                >
+                                                  {isExpanded ? "Thu gọn" : "Xem nội dung"}
+                                                </button>
+
+                                                {/* Actions depending on status */}
+                                                {reg.status === "Chờ duyệt" && (
+                                                  <>
+                                                    <button
+                                                      onClick={() => handleUpdateVolunteerStatus(reg, "Đã duyệt")}
+                                                      className="p-1.5 bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 border border-emerald-100 rounded-lg transition cursor-pointer"
+                                                      title="Phê duyệt hồ sơ"
+                                                    >
+                                                      <Check className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handleUpdateVolunteerStatus(reg, "Đã từ chối")}
+                                                      className="p-1.5 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 border border-rose-100 rounded-lg transition cursor-pointer"
+                                                      title="Từ chối hồ sơ"
+                                                    >
+                                                      <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                  </>
+                                                )}
+
+                                                {reg.status !== "Chờ duyệt" && (
+                                                  <button
+                                                    onClick={() => handleUpdateVolunteerStatus(reg, "Chờ duyệt")}
+                                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg transition cursor-pointer"
+                                                    title="Khôi phục về trạng thái chờ duyệt"
+                                                  >
+                                                    <RefreshCw className="w-3.5 h-3.5" />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            </td>
+                                          </tr>
+                                          
+                                          {/* Expanded Row containing Skills, Reason & Full Details */}
+                                          {isExpanded && (
+                                            <tr className="bg-slate-50/20">
+                                              <td colSpan={6} className="p-4 border-b border-slate-100">
+                                                <motion.div
+                                                  initial={{ opacity: 0, height: 0 }}
+                                                  animate={{ opacity: 1, height: "auto" }}
+                                                  className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-50/60 rounded-2xl border border-slate-200/50 text-left"
+                                                >
+                                                  <div className="space-y-3 text-left">
+                                                    <div className="text-[10px] font-black uppercase text-rose-500 tracking-wider">Kỹ năng chuyên môn / Năng lực sở trường:</div>
+                                                    <div className="text-slate-700 text-xs bg-white p-3.5 rounded-xl border border-slate-200 font-medium leading-relaxed whitespace-pre-wrap">
+                                                      {reg.skills || "Tình nguyện viên chưa cung cấp thông tin kỹ năng."}
+                                                    </div>
+                                                  </div>
+
+                                                  <div className="space-y-3 text-left">
+                                                    <div className="text-[10px] font-black uppercase text-rose-500 tracking-wider">Lý do & Nguyện vọng tham gia:</div>
+                                                    <div className="text-slate-700 text-xs bg-white p-3.5 rounded-xl border border-slate-200 font-medium leading-relaxed whitespace-pre-wrap">
+                                                      {reg.reason || "Tình nguyện viên chưa cung cấp lý do chi tiết."}
+                                                    </div>
+                                                  </div>
+
+                                                  <div className="md:col-span-2 pt-2 flex items-center justify-between border-t border-slate-100 text-[10px] text-slate-400 font-normal">
+                                                    <div>
+                                                      Mã Định Danh Tài Khoản (UID): <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{reg.userId || "Không liên kết tài khoản"}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                      {reg.status === "Chờ duyệt" ? (
+                                                        <span className="text-amber-500 font-bold flex items-center gap-1">
+                                                          <Clock className="w-3 h-3" /> Đơn đang đợi duyệt bởi cán bộ MTTQ Phường Phú Lợi
+                                                        </span>
+                                                      ) : reg.status === "Đã duyệt" ? (
+                                                        <span className="text-emerald-600 font-bold flex items-center gap-1 font-sans">
+                                                          <CheckCircle2 className="w-3 h-3" /> Hồ sơ hợp lệ và đã lưu chính thức vào cơ sở dữ liệu
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-rose-500 font-bold flex items-center gap-1">
+                                                          <AlertCircle className="w-3 h-3" /> Đơn bị từ chối
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </motion.div>
+                                              </td>
+                                            </tr>
+                                          )}
+                                        </React.Fragment>
+                                      );
+                                    })}
+
+                                  {volunteerRegistrations.filter(reg => {
+                                    const matchStatus = volunteerStatusFilter === "Tất cả" || reg.status === volunteerStatusFilter;
+                                    const matchQuarter = volunteerQuarterFilter === "Tất cả" || reg.quarter === volunteerQuarterFilter;
+                                    const matchSearch = 
+                                      !volunteerSearchText ||
+                                      reg.fullName.toLowerCase().includes(volunteerSearchText.toLowerCase()) ||
+                                      reg.phone.includes(volunteerSearchText) ||
+                                      (reg.email && reg.email.toLowerCase().includes(volunteerSearchText.toLowerCase())) ||
+                                      reg.eventTitle.toLowerCase().includes(volunteerSearchText.toLowerCase());
+                                    return matchStatus && matchQuarter && matchSearch;
+                                  }).length === 0 && (
+                                    <tr>
+                                      <td colSpan={6} className="p-10 text-center text-slate-400">
+                                        <HeartHandshake className="w-12 h-12 mx-auto mb-3 text-slate-300 stroke-1" />
+                                        <p className="font-bold text-sm">Không tìm thấy hồ sơ đăng ký tình nguyện viên nào</p>
+                                        <p className="text-[11px] mt-1 font-light">Hãy thử thay đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm của bạn.</p>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <table className="w-full text-left border-collapse text-xs">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider font-sans">
+                                    <th className="p-4">Tình nguyện viên</th>
+                                    <th className="p-4">Khu phố cư trú</th>
+                                    <th className="p-4">Địa bàn đăng ký hỗ trợ</th>
+                                    <th className="p-4 text-center">Vai trò hệ thống</th>
+                                    <th className="p-4 text-right">Liên hệ / Số ĐT</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                                  {users
+                                    .filter(user => {
+                                      if (!user.isVolunteer) return false;
+                                      
+                                      const userQuarterStr = getQuarterName(user.quarter) || "";
+                                      const matchQuarter = volunteerQuarterFilter === "Tất cả" || 
+                                        userQuarterStr === volunteerQuarterFilter || 
+                                        (user.volunteerQuarters && user.volunteerQuarters.includes(volunteerQuarterFilter));
+
+                                      const matchSearch = 
+                                        !volunteerSearchText ||
+                                        user.fullName.toLowerCase().includes(volunteerSearchText.toLowerCase()) ||
+                                        (user.phone && user.phone.includes(volunteerSearchText)) ||
+                                        (user.email && user.email.toLowerCase().includes(volunteerSearchText.toLowerCase()));
+
+                                      return matchQuarter && matchSearch;
+                                    })
+                                    .map((user, idx) => (
+                                      <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="p-4">
+                                          <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5 font-sans">
+                                            {user.fullName}
+                                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title="Tài khoản hoạt động chính thức" />
+                                          </div>
+                                          <div className="text-slate-500 text-[11px] mt-1 font-light">
+                                            Email: <span className="text-slate-600 font-normal">{user.email || "Không có email"}</span>
+                                          </div>
+                                        </td>
+                                        <td className="p-4">
+                                          <span className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-full text-[10px] font-black uppercase text-slate-600 tracking-wider">
+                                            {getQuarterName(user.quarter) || "Địa bàn Phường"}
+                                          </span>
+                                        </td>
+                                        <td className="p-4">
+                                          <div className="flex flex-wrap gap-1">
+                                            {user.volunteerQuarters && user.volunteerQuarters.length > 0 ? (
+                                              user.volunteerQuarters.map((q, qidx) => (
+                                                <span key={qidx} className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded text-[10px] font-bold border border-rose-100">
+                                                  {q}
+                                                </span>
+                                              ))
+                                            ) : (
+                                              <span className="px-2 py-0.5 bg-slate-50 text-slate-400 rounded text-[10px] font-bold">
+                                                {getQuarterName(user.quarter) || "Mặc định"}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                          <div className="flex items-center justify-center gap-1.5">
+                                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-black uppercase tracking-wider border border-emerald-100">
+                                              Tình nguyện viên
+                                            </span>
+                                            {user.isAdmin && (
+                                              <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-black uppercase tracking-wider border border-red-100">
+                                                Admin
+                                              </span>
+                                            )}
+                                            {user.isOfficer && (
+                                              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-black uppercase tracking-wider border border-blue-100">
+                                                Cán bộ KP
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="p-4 text-right font-mono text-slate-700 font-bold">
+                                          {user.phone || "Chưa cung cấp SĐT"}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  {users.filter(user => {
+                                    if (!user.isVolunteer) return false;
+                                    
+                                    const userQuarterStr = getQuarterName(user.quarter) || "";
+                                    const matchQuarter = volunteerQuarterFilter === "Tất cả" || 
+                                      userQuarterStr === volunteerQuarterFilter || 
+                                      (user.volunteerQuarters && user.volunteerQuarters.includes(volunteerQuarterFilter));
+
+                                    const matchSearch = 
+                                      !volunteerSearchText ||
+                                      user.fullName.toLowerCase().includes(volunteerSearchText.toLowerCase()) ||
+                                      (user.phone && user.phone.includes(volunteerSearchText)) ||
+                                      (user.email && user.email.toLowerCase().includes(volunteerSearchText.toLowerCase()));
+
+                                    return matchQuarter && matchSearch;
+                                  }).length === 0 && (
+                                    <tr>
+                                      <td colSpan={5} className="p-10 text-center text-slate-400">
+                                        <HeartHandshake className="w-12 h-12 mx-auto mb-3 text-slate-300 stroke-1" />
+                                        <p className="font-bold text-sm">Không tìm thấy tình nguyện viên đăng ký chung nào</p>
+                                        <p className="text-[11px] mt-1 font-light">Hãy thử thay đổi bộ lọc khu phố hoặc từ khóa tìm kiếm.</p>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}

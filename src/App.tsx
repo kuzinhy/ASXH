@@ -86,8 +86,11 @@ import {
   Trophy,
   Activity,
   Vote,
-  Edit3
-, MessageSquare, ImagePlus } from "lucide-react";
+  Edit3,
+  MessageSquare,
+  ImagePlus,
+  HeartHandshake
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { collection, onSnapshot, doc } from "firebase/firestore";
 
@@ -261,7 +264,7 @@ export default function App() {
   }, []);
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<"roles" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "brain" | "partners" | "partyFeedback" | "aiPersonality">(() => {
+  const [adminActiveTab, setAdminActiveTab] = useState<"roles" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "brain" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers" | "imageUpload" | string>(() => {
     try {
       const cached = sessionStorage.getItem("phuloi_admin_active_tab");
       return (cached as any) || "roles";
@@ -1559,6 +1562,7 @@ const handleDeleteNews = async (id: string) => {
                   { id: "news", icon: Globe, label: "Quản lý tin tức AI" },
                   { id: "policies", icon: Landmark, label: "Chính sách An sinh" },
                   { id: "events", icon: Calendar, label: "Quản lý Lịch Sự kiện" },
+                  { id: "volunteers", icon: HeartHandshake, label: "Xét duyệt Tình nguyện viên", iconClass: "text-rose-500" },
                   { id: "brain", icon: Brain, label: "Bộ脑 Trợ lý (Drive)", iconClass: "text-amber-500" },
                   { id: "partners", icon: Award, label: "Đơn vị đồng hành", iconClass: "text-indigo-500" },
                   { id: "forum", icon: MessageSquare, label: "Diễn đàn & Phản ánh", iconClass: "text-indigo-500" },
