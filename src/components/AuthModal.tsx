@@ -286,7 +286,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
             email: userCredential.user.email || email,
             fullName: email.split("@")[0],
             phone: "",
-            address: "Phú Lợi, Thủ Dầu Một, Bình Dương",
+            address: "Phú Lợi, Thành phố Hồ Chí Minh",
             quarter: QUARTERS_LIST[0].name
           };
           onAuthSuccess(fallbackProfile);
@@ -396,7 +396,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           email: user.email || "",
           fullName: user.displayName || user.email?.split("@")[0] || "Công dân Google",
           phone: user.phoneNumber || "0900000000",
-          address: "Phường Phú Lợi, Thủ Dầu Một, Bình Dương",
+          address: "Phường Phú Lợi, Thành phố Hồ Chí Minh",
           quarter: QUARTERS_LIST[0].name,
           avatarUrl: user.photoURL || undefined
         };
@@ -455,7 +455,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           
           <h3 className="text-xl font-bold uppercase tracking-wider text-blue-900 font-sans">Cổng Xác Thực An Sinh</h3>
           <p className="text-blue-900 text-xs mt-1.5 font-light">
-            Phường Phú Lợi, Thủ Dầu Một, Bình Dương
+            Phường Phú Lợi, Thành phố Hồ Chí Minh
           </p>
 
           {/* Tab Selector */}

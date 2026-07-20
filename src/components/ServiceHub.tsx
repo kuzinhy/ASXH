@@ -1124,7 +1124,7 @@ export default function ServiceHub({
     onSubmitRequest({
       fullName: reqName,
       phone: reqPhone,
-      address: reqAddress || "Phú Lợi, Thủ Dầu Một, Bình Dương",
+      address: reqAddress || "Phú Lợi, Thành phố Hồ Chí Minh",
       quarter: reqQuarter,
       category: reqCategory,
       description: reqDescription,
@@ -1454,7 +1454,7 @@ export default function ServiceHub({
                         <span>Công Cụ Tính Phí BHYT Hộ Gia Đình</span>
                       </h3>
                       <p className="text-slate-500 text-xs mt-1 font-light">
-                        Tự động tính giảm trừ bảo hiểm xã hội theo Nghị định 24/2024/NĐ-CP (Áp dụng mức lương cơ sở mới <strong className="text-slate-700">2.340.000đ</strong>) và các chính sách hỗ trợ bổ sung của tỉnh Bình Dương.
+                        Tự động tính giảm trừ bảo hiểm xã hội theo Nghị định 24/2024/NĐ-CP (Áp dụng mức lương cơ sở mới <strong className="text-slate-700">2.340.000đ</strong>) và các chính sách hỗ trợ bổ sung của Thành phố Hồ Chí Minh.
                       </p>
                     </div>
 
@@ -1480,7 +1480,7 @@ export default function ServiceHub({
                             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-sky-500/50 transition-colors font-medium bg-white border-slate-200 text-slate-800"
                           >
                             <option value="normal" className="bg-white text-slate-800">Hộ gia đình thông thường</option>
-                            <option value="near_poor" className="bg-white text-slate-800">Hộ cận nghèo (Bình Dương hỗ trợ 100%)</option>
+                            <option value="near_poor" className="bg-white text-slate-800">Hộ cận nghèo (Thành phố Hồ Chí Minh hỗ trợ 100%)</option>
                             <option value="poor" className="bg-white text-slate-800">Hộ nghèo (Nhà nước cấp miễn phí)</option>
                             <option value="student" className="bg-white text-slate-800">Học sinh / Sinh viên (TW hỗ trợ 30%)</option>
                             <option value="children_under_6" className="bg-white text-slate-800">Trẻ em dưới 6 tuổi (Cấp miễn phí)</option>
@@ -1534,7 +1534,7 @@ export default function ServiceHub({
                           )}
                           {bhytResult.binhDuongSubsidy > 0 && (
                             <div className="flex justify-between">
-                              <span>Tỉnh Bình Dương hỗ trợ đặc thù:</span>
+                              <span>Thành phố Hồ Chí Minh hỗ trợ đặc thù:</span>
                               <span className="font-semibold text-teal-500">-{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(bhytResult.binhDuongSubsidy)}</span>
                             </div>
                           )}
@@ -2253,7 +2253,7 @@ export default function ServiceHub({
                 <div className="bg-blue-50 p-4 rounded-xl border border-sky-500/20 text-[11px] text-slate-500 flex items-start space-x-2 leading-relaxed font-light">
                   <Calendar className="w-4 h-4 text-slate-800 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-slate-800 font-bold">Lịch Ngày Hội Việc Làm Phường:</strong> Ngày 15 hàng tháng, Ủy ban MTTQ phường Phú Lợi kết hợp cùng Trung tâm dịch vụ việc làm Tỉnh Bình Dương tổ chức Sàn giao dịch việc làm trực tiếp tại Nhà văn hóa phường. Bà con có thể đến nộp hồ sơ phỏng vấn trực tiếp!
+                    <strong className="text-slate-800 font-bold">Lịch Ngày Hội Việc Làm Phường:</strong> Ngày 15 hàng tháng, Ủy ban MTTQ phường Phú Lợi kết hợp cùng Trung tâm dịch vụ việc làm Thành phố Hồ Chí Minh tổ chức Sàn giao dịch việc làm trực tiếp tại Nhà văn hóa phường. Bà con có thể đến nộp hồ sơ phỏng vấn trực tiếp!
                   </div>
                 </div>
               </div>
@@ -2301,7 +2301,7 @@ export default function ServiceHub({
                         </div>
 
                         <p className="text-xs text-slate-500 italic font-light leading-relaxed">
-                          Ban chỉ đạo Chương trình An sinh xã hội số phường Phú Lợi, Thành phố Thủ Dầu Một, Tỉnh Bình Dương kính ghi nhận và tri ân sâu sắc:
+                          Ban chỉ đạo Chương trình An sinh xã hội số phường Phú Lợi, Thành phố Hồ Chí Minh kính ghi nhận và tri ân sâu sắc:
                         </p>
 
                         <div>
@@ -4158,7 +4158,7 @@ export default function ServiceHub({
                 </div>
 
                 <p className="text-[11px] text-slate-500 italic font-light leading-relaxed">
-                  Ban chỉ đạo Chương trình An sinh xã hội số phường Phú Lợi, Thành phố Thủ Dầu Một, Tỉnh Bình Dương kính ghi nhận và tri ân sâu sắc:
+                  Ban chỉ đạo Chương trình An sinh xã hội số phường Phú Lợi, Thành phố Hồ Chí Minh kính ghi nhận và tri ân sâu sắc:
                 </p>
 
                 <div>
@@ -4404,7 +4404,7 @@ function VolunteerRegForm({ currentUser, events = [], showToast }: VolunteerRegF
             <div className="flex justify-between items-start">
               <div className="space-y-1 text-left">
                 <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-700">Đảng Cộng Sản Việt Nam</h5>
-                <h6 className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Ủy Ban MTTQ Phường Phú Lợi, TP. Thủ Dầu Một</h6>
+                <h6 className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Ủy Ban MTTQ Phường Phú Lợi, TP. Hồ Chí Minh</h6>
               </div>
               <div className="bg-white p-1 shadow-sm rounded-sm border border-slate-100">
                 <QRCodeSVG value={`https://phuloi.gov.vn/volunteer/verify/${ticketResult.id}`} size={48} level="M" />

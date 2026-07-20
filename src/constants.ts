@@ -252,7 +252,7 @@ export const MTTQ_REPORT_CAMPAIGNS: Campaign[] = [
 export const MTTQ_REPORT_DONATIONS: Donation[] = [
   {
     id: "DON-MTTQ-001",
-    donorName: "Công ty TNHH MTV Xổ số kiến thiết Tỉnh Bình Dương",
+    donorName: "Công ty TNHH MTV Xổ số kiến thiết Thành phố Hồ Chí Minh (Đại diện Phú Lợi)",
     amount: 12000000,
     campaignTitle: "Chương trình Xuân đoàn kết - Tết nhân ái 2026",
     message: "Kính chúc bà con và gia đình chính sách, các Mẹ VNAH luôn mạnh khỏe, đón Tết Bính Ngọ đầm ấm nghĩa tình.",

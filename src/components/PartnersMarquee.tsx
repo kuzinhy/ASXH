@@ -104,7 +104,7 @@ const PARTNERS_COL_2: Partner[] = [
   },
   {
     id: "part-7",
-    name: "Hội Doanh Nhân Trẻ Bình Dương",
+    name: "Hội Doanh Nhân Trẻ Thành phố Hồ Chí Minh (Phú Lợi)",
     role: "Bảo Trợ Việc Làm & Đào Tạo",
     description: "Kết nối việc làm cho người lao động mất việc, tài trợ học nghề miễn phí và đóng góp tài chính định kỳ vào quỹ an sinh.",
     icon: Briefcase,
@@ -115,7 +115,7 @@ const PARTNERS_COL_2: Partner[] = [
   },
   {
     id: "part-8",
-    name: "Công Ty Điện Lực Thủ Dầu Một",
+    name: "Công Ty Điện Lực Thành phố Hồ Chí Minh (Phú Lợi)",
     role: "Bảo Trợ Năng Lượng An Toàn",
     description: "Hỗ trợ miễn giảm tiền điện cho hộ nghèo, rà soát nâng cấp hệ thống dây dẫn điện an toàn cho các gia đình khó khăn trên địa bàn.",
     icon: Zap,
@@ -362,7 +362,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
                   },
                   {
                     id: "fb-5",
-                    name: "Điện Lực Thủ Dầu Một",
+                    name: "Điện Lực Phú Lợi, TP. Hồ Chí Minh",
                     role: "Bảo Trợ Năng Lượng",
                     imageUrl: "/partners/partner_3.jpg"
                   }

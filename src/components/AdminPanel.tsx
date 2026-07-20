@@ -1072,7 +1072,7 @@ export default function AdminPanel({
       title: jobTitle.trim(),
       company: jobCompany.trim(),
       salary: jobSalary.trim() || "Thỏa thuận",
-      location: jobLocation.trim() || "Phú Lợi, Thủ Dầu Một",
+      location: jobLocation.trim() || "Phú Lợi, Thành phố Hồ Chí Minh",
       description: jobDesc.trim(),
       requirements: reqList,
       contact: jobContact.trim(),
@@ -1529,7 +1529,7 @@ export default function AdminPanel({
         email: "vu.dat@gmail.com",
         fullName: "Vũ Đạt",
         phone: "0966442200",
-        address: "123 Đại lộ Bình Dương, Khu phố 4",
+        address: "123 Đường Phú Lợi, Khu phố 4",
         quarter: "Khu phố 4",
         isVolunteer: true,
         badges: ["badge-visits", "badge-news"]

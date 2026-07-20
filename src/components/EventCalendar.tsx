@@ -24,7 +24,7 @@ const EVENTS = [
     title: "Lễ Viếng Nghĩa Trang Liệt Sĩ",
     date: "27/07/2026",
     time: "06:30 - 08:30",
-    location: "Nghĩa trang Liệt sĩ Tỉnh Bình Dương",
+    location: "Nghĩa trang Liệt sĩ Phường Phú Lợi, Thành phố Hồ Chí Minh",
     type: "Kỷ niệm",
     description: "Nhân kỷ niệm Ngày Thương binh - Liệt sĩ, dâng hương tưởng nhớ các anh hùng.",
     iconName: "Star",

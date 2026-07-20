@@ -141,7 +141,7 @@ const jobListings = [
     title: "Nhân viên Bán hàng Siêu thị",
     company: "Co.opmart Phú Lợi",
     salary: "6.500.000đ - 8.000.000đ/tháng",
-    location: "Huỳnh Văn Lũy, Phú Lợi, Thủ Dầu Một",
+    location: "Huỳnh Văn Lũy, Phú Lợi, Thành phố Hồ Chí Minh",
     description: "Tư vấn sản phẩm, sắp xếp hàng hóa lên kệ, tính tiền cho khách hàng tại quầy thanh toán.",
     requirements: [
       "Nam/Nữ từ 18 - 35 tuổi, nhanh nhẹn, trung thực.",
@@ -155,7 +155,7 @@ const jobListings = [
     title: "Công nhân May mặc Công nghiệp",
     company: "Công ty May mặc Đại Đăng",
     salary: "7.500.000đ - 10.000.000đ/tháng",
-    location: "Khu công nghiệp Đại Đăng, Phú Lợi, Thủ Dầu Một",
+    location: "Khu công nghiệp Đại Đăng, Phú Lợi, Thành phố Hồ Chí Minh",
     description: "Vận hành máy may công nghiệp, may các chi tiết sản phẩm may mặc xuất khẩu theo dây chuyền chuyền.",
     requirements: [
       "Không yêu cầu kinh nghiệm (sẽ được đào tạo miễn phí).",
