@@ -13,18 +13,17 @@ export default function CircuitBackground() {
     let animationFrameId: number;
     let particles: Particle[] = [];
     
-    interface ScienceSymbol {
+    interface DigitalSymbol {
       x: number;
       y: number;
-      type: "atom" | "dna" | "molecule" | "orbit" | "math";
+      type: "wifi" | "chip" | "cloud" | "nodes" | "community";
       size: number;
       rotation: number;
       rotSpeed: number;
       opacity: number;
-      text?: string;
     }
 
-    let scienceSymbols: ScienceSymbol[] = [];
+    let digitalSymbols: DigitalSymbol[] = [];
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -60,7 +59,7 @@ export default function CircuitBackground() {
         if (!ctx) return;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(14, 165, 233, 0.25)";
+        ctx.fillStyle = "rgba(14, 165, 233, 0.22)";
         ctx.fill();
       }
     }
@@ -74,27 +73,61 @@ export default function CircuitBackground() {
     };
 
     const initSymbols = () => {
-      scienceSymbols = [];
-      const numSymbols = Math.max(6, Math.floor((canvas.width * canvas.height) / 160000));
-      const types: Array<"atom" | "dna" | "molecule" | "orbit" | "math"> = ["atom", "dna", "molecule", "orbit", "math"];
-      const mathTexts = ["E = mc²", "∑ xᵢ = 1", "∫ f(x) dx", "π ≈ 3.1415", "λ = h/p", "i² = -1", "∇ × B = μ₀J"];
+      digitalSymbols = [];
+      const numSymbols = Math.max(6, Math.floor((canvas.width * canvas.height) / 150000));
+      const types: Array<"wifi" | "chip" | "cloud" | "nodes" | "community"> = [
+        "wifi",
+        "chip",
+        "cloud",
+        "nodes",
+        "community"
+      ];
 
       for (let i = 0; i < numSymbols; i++) {
         const type = types[i % types.length];
-        scienceSymbols.push({
+        digitalSymbols.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
           type,
-          size: Math.random() * 50 + 50, // 50px to 100px size
+          size: Math.random() * 40 + 50, // 50px to 90px size
           rotation: Math.random() * Math.PI * 2,
-          rotSpeed: (Math.random() - 0.5) * 0.003,
-          opacity: Math.random() * 0.12 + 0.15, // Increased opacity from original 0.05-0.10 for better visibility
-          text: type === "math" ? mathTexts[Math.floor(Math.random() * mathTexts.length)] : undefined,
+          rotSpeed: (Math.random() - 0.5) * 0.002, // Subtle slow rotating speed
+          opacity: Math.random() * 0.12 + 0.18, // Visible yet elegant background watermark level
         });
       }
     };
 
-    const drawAtom = (x: number, y: number, size: number, rotation: number, opacity: number) => {
+    const drawWifi = (x: number, y: number, size: number, rotation: number, opacity: number) => {
+      if (!ctx) return;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation * 0.15); // Very slow drift rotation
+      ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = "round";
+
+      const startAngle = -Math.PI * 0.72;
+      const endAngle = -Math.PI * 0.28;
+      const centerY = size * 0.25;
+
+      // Base dot
+      ctx.beginPath();
+      ctx.arc(0, centerY, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.15})`;
+      ctx.fill();
+
+      // Signal arcs
+      const radii = [size * 0.25, size * 0.5, size * 0.75];
+      radii.forEach((r) => {
+        ctx.beginPath();
+        ctx.arc(0, centerY, r, startAngle, endAngle);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    };
+
+    const drawChip = (x: number, y: number, size: number, rotation: number, opacity: number) => {
       if (!ctx) return;
       ctx.save();
       ctx.translate(x, y);
@@ -102,159 +135,202 @@ export default function CircuitBackground() {
       ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
       ctx.lineWidth = 1.5;
 
-      // Draw 3 orbits
-      for (let i = 0; i < 3; i++) {
-        ctx.save();
-        ctx.rotate((i * Math.PI) / 3);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, size, size * 0.35, 0, 0, Math.PI * 2);
-        ctx.stroke();
+      const half = size * 0.24;
+      // Main square
+      ctx.beginPath();
+      ctx.rect(-half, -half, half * 2, half * 2);
+      ctx.stroke();
 
-        // Electron
-        const angle = (Date.now() * 0.0008) + i * 2;
-        const ex = Math.cos(angle) * size;
-        const ey = Math.sin(angle) * size * 0.35;
+      // Internal chip core
+      ctx.beginPath();
+      ctx.rect(-half * 0.55, -half * 0.55, half * 1.1, half * 1.1);
+      ctx.fillStyle = `rgba(14, 165, 233, ${opacity * 0.35})`;
+      ctx.fill();
+      ctx.stroke();
+
+      // Connector pins
+      const pinLength = size * 0.16;
+      const pinOffsets = [-half * 0.5, 0, half * 0.5];
+
+      // Top/Bottom pins
+      pinOffsets.forEach((offset) => {
+        // Top pin
         ctx.beginPath();
-        ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+        ctx.moveTo(offset, -half);
+        ctx.lineTo(offset, -half - pinLength);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(offset, -half - pinLength, 2, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.12})`;
         ctx.fill();
-        ctx.restore();
-      }
 
-      // Nucleus
-      ctx.beginPath();
-      ctx.arc(0, 0, 6, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.18})`;
-      ctx.fill();
-      ctx.restore();
-    };
-
-    const drawDna = (x: number, y: number, size: number, rotation: number, opacity: number) => {
-      if (!ctx) return;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(rotation);
-      ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
-      ctx.lineWidth = 1.5;
-
-      const numPoints = 10;
-      const spacing = size / numPoints;
-      const amplitude = size * 0.28;
-      const time = Date.now() * 0.001;
-
-      for (let i = 0; i < numPoints; i++) {
-        const px = -size / 2 + i * spacing;
-        const theta = (i / numPoints) * Math.PI * 2 + time;
-        const py1 = Math.sin(theta) * amplitude;
-        const py2 = -Math.sin(theta) * amplitude;
-
+        // Bottom pin
         ctx.beginPath();
-        ctx.moveTo(px, py1);
-        ctx.lineTo(px, py2);
+        ctx.moveTo(offset, half);
+        ctx.lineTo(offset, half + pinLength);
         ctx.stroke();
-
         ctx.beginPath();
-        ctx.arc(px, py1, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.15})`;
+        ctx.arc(offset, half + pinLength, 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.12})`;
+        ctx.fill();
+      });
+
+      // Left/Right pins
+      pinOffsets.forEach((offset) => {
+        // Left pin
+        ctx.beginPath();
+        ctx.moveTo(-half, offset);
+        ctx.lineTo(-half - pinLength, offset);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(-half - pinLength, offset, 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.12})`;
         ctx.fill();
 
+        // Right pin
         ctx.beginPath();
-        ctx.arc(px, py2, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(56, 189, 248, ${opacity + 0.15})`;
+        ctx.moveTo(half, offset);
+        ctx.lineTo(half + pinLength, offset);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(half + pinLength, offset, 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.12})`;
         ctx.fill();
-      }
+      });
+
       ctx.restore();
     };
 
-    const drawMolecule = (x: number, y: number, size: number, rotation: number, opacity: number) => {
+    const drawCloud = (x: number, y: number, size: number, rotation: number, opacity: number) => {
       if (!ctx) return;
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(rotation);
+      ctx.rotate(rotation * 0.08); // Drift slowly
       ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.6;
 
-      // Hexagon ring
+      const w = size * 0.72;
+      const h = size * 0.44;
+      const ox = -w / 2;
+      const oy = h / 2;
+
       ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const angle = (i * Math.PI) / 3;
-        const hx = Math.cos(angle) * (size * 0.55);
-        const hy = Math.sin(angle) * (size * 0.55);
-        if (i === 0) ctx.moveTo(hx, hy);
-        else ctx.lineTo(hx, hy);
-      }
+      // Flat bottom
+      ctx.moveTo(ox + w * 0.18, oy);
+      ctx.lineTo(ox + w * 0.82, oy);
+      
+      // Right cloud puff
+      ctx.arc(ox + w * 0.82, oy - w * 0.15, w * 0.15, Math.PI * 0.5, -Math.PI * 0.25, true);
+      // Large top puff
+      ctx.arc(ox + w * 0.58, oy - h * 0.68, w * 0.24, -Math.PI * 0.1, -Math.PI * 0.9, true);
+      // Left puff
+      ctx.arc(ox + w * 0.32, oy - h * 0.58, w * 0.19, -Math.PI * 0.15, -Math.PI * 1.1, true);
+      // Extra left puff
+      ctx.arc(ox + w * 0.18, oy - w * 0.12, w * 0.12, -Math.PI * 0.7, Math.PI * 0.5, true);
+      
       ctx.closePath();
       ctx.stroke();
 
-      // Inner ring circle
+      // Data signal lines inside the cloud
       ctx.beginPath();
-      ctx.arc(0, 0, size * 0.38, 0, Math.PI * 2);
+      ctx.moveTo(ox + w * 0.32, oy - h * 0.2);
+      ctx.lineTo(ox + w * 0.68, oy - h * 0.2);
+      ctx.moveTo(ox + w * 0.42, oy - h * 0.38);
+      ctx.lineTo(ox + w * 0.58, oy - h * 0.38);
+      ctx.strokeStyle = `rgba(14, 165, 233, ${opacity * 0.75})`;
       ctx.stroke();
 
-      // Functional branches
-      const branchIndices = [0, 2, 4];
-      branchIndices.forEach((idx) => {
-        const angle = (idx * Math.PI) / 3;
-        const bx1 = Math.cos(angle) * (size * 0.55);
-        const by1 = Math.sin(angle) * (size * 0.55);
-        const bx2 = Math.cos(angle) * (size * 0.9);
-        const by2 = Math.sin(angle) * (size * 0.9);
-
-        ctx.beginPath();
-        ctx.moveTo(bx1, by1);
-        ctx.lineTo(bx2, by2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(bx2, by2, 4.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.18})`;
-        ctx.fill();
-      });
       ctx.restore();
     };
 
-    const drawOrbit = (x: number, y: number, size: number, rotation: number, opacity: number) => {
+    const drawNodes = (x: number, y: number, size: number, rotation: number, opacity: number) => {
       if (!ctx) return;
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rotation);
       ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1.3;
 
-      const radii = [0.45, 0.75, 1.05];
-      radii.forEach((rMult, idx) => {
-        const r = size * rMult;
+      const r = size * 0.38;
+      // Define 4 nodes in a ring + 1 center node
+      const points = [
+        { x: Math.cos(0) * r, y: Math.sin(0) * r },
+        { x: Math.cos(Math.PI * 0.5) * r, y: Math.sin(Math.PI * 0.5) * r },
+        { x: Math.cos(Math.PI) * r, y: Math.sin(Math.PI) * r },
+        { x: Math.cos(Math.PI * 1.5) * r, y: Math.sin(Math.PI * 1.5) * r },
+        { x: 0, y: 0 } // Center node
+      ];
+
+      // Connections
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.moveTo(points[0].x, points[0].y);
+      ctx.lineTo(points[1].x, points[1].y);
+      ctx.lineTo(points[2].x, points[2].y);
+      ctx.lineTo(points[3].x, points[3].y);
+      ctx.lineTo(points[0].x, points[0].y);
+      ctx.stroke();
+
+      // Node circles
+      points.forEach((pt, idx) => {
         ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.stroke();
-
-        const angle = (Date.now() * (0.0004 * (3 - idx))) + idx * 1.5;
-        const px = Math.cos(angle) * r;
-        const py = Math.sin(angle) * r;
-
-        ctx.beginPath();
-        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.15})`;
+        const rad = idx === 4 ? 5.5 : 4.2;
+        ctx.arc(pt.x, pt.y, rad, 0, Math.PI * 2);
+        ctx.fillStyle = idx === 4 ? `rgba(14, 165, 233, ${opacity + 0.18})` : `rgba(56, 189, 248, ${opacity + 0.12})`;
         ctx.fill();
+        ctx.stroke();
       });
 
-      ctx.beginPath();
-      ctx.arc(0, 0, 7, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.2})`;
-      ctx.fill();
       ctx.restore();
     };
 
-    const drawMath = (x: number, y: number, size: number, rotation: number, opacity: number, text: string) => {
+    const drawCommunity = (x: number, y: number, size: number, rotation: number, opacity: number) => {
       if (!ctx) return;
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(rotation * 0.15);
-      ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.22})`;
-      ctx.font = `600 ${Math.max(13, Math.floor(size * 0.32))}px "JetBrains Mono", monospace`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(text, 0, 0);
+      ctx.rotate(rotation * 0.12); // Drift slowly
+      ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
+      ctx.lineWidth = 1.5;
+
+      const drawAvatar = (ox: number, oy: number, scale: number) => {
+        // Head
+        ctx.beginPath();
+        ctx.arc(ox, oy - 10 * scale, 6 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Shoulders/Chest
+        ctx.beginPath();
+        ctx.arc(ox, oy + 10 * scale, 12 * scale, Math.PI, 0);
+        ctx.stroke();
+      };
+
+      const dist = size * 0.24;
+      
+      // Connective line (Bridge)
+      ctx.beginPath();
+      ctx.moveTo(-dist, 0);
+      ctx.lineTo(dist, 0);
+      ctx.stroke();
+
+      // Connection point
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(14, 165, 233, ${opacity + 0.2})`;
+      ctx.fill();
+
+      // Left citizen
+      ctx.save();
+      drawAvatar(-dist, 0, size * 0.009);
+      ctx.restore();
+
+      // Right citizen
+      ctx.save();
+      drawAvatar(dist, 0, size * 0.009);
+      ctx.restore();
+
       ctx.restore();
     };
 
@@ -279,14 +355,14 @@ export default function CircuitBackground() {
     };
 
     const updateSymbols = () => {
-      scienceSymbols.forEach((s) => {
+      digitalSymbols.forEach((s) => {
         s.rotation += s.rotSpeed;
         
-        // Float very slowly across the page
+        // Floating motion across page
         s.x += Math.sin(Date.now() * 0.00005 + s.size) * 0.08;
         s.y += Math.cos(Date.now() * 0.00005 + s.size) * 0.08;
 
-        // Wrap boundaries
+        // Warp boundaries
         if (s.x < -s.size) s.x = canvas.width + s.size;
         if (s.x > canvas.width + s.size) s.x = -s.size;
         if (s.y < -s.size) s.y = canvas.height + s.size;
@@ -298,14 +374,14 @@ export default function CircuitBackground() {
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 1. Draw Science Symbols Background first
+      // 1. Draw Digital Tech & Connection Symbols Background
       updateSymbols();
-      scienceSymbols.forEach((s) => {
-        if (s.type === "atom") drawAtom(s.x, s.y, s.size, s.rotation, s.opacity);
-        else if (s.type === "dna") drawDna(s.x, s.y, s.size, s.rotation, s.opacity);
-        else if (s.type === "molecule") drawMolecule(s.x, s.y, s.size, s.rotation, s.opacity);
-        else if (s.type === "orbit") drawOrbit(s.x, s.y, s.size, s.rotation, s.opacity);
-        else if (s.type === "math") drawMath(s.x, s.y, s.size, s.rotation, s.opacity, s.text || "");
+      digitalSymbols.forEach((s) => {
+        if (s.type === "wifi") drawWifi(s.x, s.y, s.size, s.rotation, s.opacity);
+        else if (s.type === "chip") drawChip(s.x, s.y, s.size, s.rotation, s.opacity);
+        else if (s.type === "cloud") drawCloud(s.x, s.y, s.size, s.rotation, s.opacity);
+        else if (s.type === "nodes") drawNodes(s.x, s.y, s.size, s.rotation, s.opacity);
+        else if (s.type === "community") drawCommunity(s.x, s.y, s.size, s.rotation, s.opacity);
       });
 
       // 2. Draw Network particles and connecting lines
