@@ -102,7 +102,7 @@ export default function KindnessHearts({ news = [] }: KindnessHeartsProps) {
       title: "Cổng An Sinh Xã Hội Số Phường Phú Lợi, Thành phố Hồ Chí Minh",
       body: "Không gian kết nối nghĩa tình trực tuyến, hỗ trợ người dân đăng ký cứu trợ khẩn cấp, tra cứu chính sách an sinh, tìm kiếm việc làm và đóng góp từ thiện minh bạch.",
       category: "CỔNG AN SINH SỐ",
-      imageUrl: "https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&q=80&w=600",
+      imageUrl: "/social_share.svg",
       url: window.location.origin
     };
 
