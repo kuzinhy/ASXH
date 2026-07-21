@@ -1272,6 +1272,8 @@ export default function AdminPanel({
       console.error("Drive Auth Error:", e);
       if (String(e).includes("popup-blocked") || String(e).includes("cancelled-by-user")) {
         showFeedback("❌ Cửa sổ xác thực bị chặn hoặc bị đóng. Nếu vẫn lỗi, hãy nhấn 'Mở trong tab mới' (nút ở góc trên bên phải) và thử lại.", true);
+      } else if (String(e).includes("api-key-not-valid") || String(e).includes("invalid-api-key")) {
+        showFeedback("❌ Lỗi cấu hình Firebase: API Key không hợp lệ. Vui lòng thiết lập lại Firebase.", true);
       } else {
         showFeedback("❌ Lỗi kết nối Drive: " + (e.message || "Vui lòng thử lại"), true);
       }

@@ -235,6 +235,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         return "Trình duyệt đã chặn cửa sổ đăng nhập Google (Popup blocked). Vui lòng cho phép bật cửa sổ popup trên trình duyệt của bạn để hoàn tất.";
       case "unavailable":
         return "Lỗi kết nối máy chủ Firestore (unavailable). Có thể bạn chưa khởi tạo Cơ sở dữ liệu Firestore trong Firebase Console (hoặc do mạng bị chặn). Vui lòng vào Firebase Console -> Firestore Database -> Tạo cơ sở dữ liệu (Create database).";
+      case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
+      case "auth/invalid-api-key":
+        return "Lỗi API Key Firebase không hợp lệ. Vui lòng kiểm tra lại cấu hình Firebase API Key trong dự án hoặc yêu cầu trợ lý AI thiết lập lại Firebase.";
       default:
         return `Đã xảy ra lỗi hệ thống khi xác thực (${code}). Vui lòng thử lại hoặc kiểm tra bảng điều khiển (Console) trình duyệt để biết chi tiết lỗi.`;
     }
