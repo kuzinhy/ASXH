@@ -10,13 +10,13 @@ import { ShieldCheck, ShieldAlert, Users, Settings, Sliders, Activity, ChevronDo
   MessageSquare, Copy, ExternalLink, Send, Search, Archive, Eye, Filter,
   Vote, Edit3, Sparkles, ImagePlus, HeartHandshake, UserCheck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { UserProfile, WebConfig, Campaign, JobListing, CitizenRequest, SupportCategory, RequestStatus, NewsArticle, OfficialPartner, SystemBadge, UserBadgeInfo, PartyContribution, CalendarEvent, VolunteerRegistration } from "../types";
+import { UserProfile, WebConfig, Campaign, JobListing, CitizenRequest, SupportCategory, RequestStatus, NewsArticle, OfficialPartner, SystemBadge, UserBadgeInfo, PartyContribution, CalendarEvent, VolunteerRegistration, GalleryImage } from "../types";
 import AdminForumPanel from "./AdminForumPanel";
 import ProfileModal from "./ProfileModal";
 import PushNotificationCenter from "./PushNotificationCenter";
 import ConfirmDialog from "./ConfirmDialog";
 import { QUARTERS_LIST } from "../constants";
-import { fetchAllUserProfiles, updateUserProfileInFirestore, fetchWebConfig, saveWebConfig, DEFAULT_WEB_CONFIG, saveCampaignToFirestore, deleteCampaignFromFirestore, saveJobToFirestore, deleteJobFromFirestore, updateRequestInFirestore, fetchSystemBadges, saveSystemBadge, deleteSystemBadge, OperationType, saveEventToFirestore, deleteEventFromFirestore, savePolicyDocumentToFirestore, deletePolicyDocumentFromFirestore, fetchVolunteerRegistrationsFromFirestore, updateVolunteerRegistrationStatusInFirestore } from "../lib/firebaseSync";
+import { fetchAllUserProfiles, updateUserProfileInFirestore, fetchWebConfig, saveWebConfig, DEFAULT_WEB_CONFIG, saveCampaignToFirestore, deleteCampaignFromFirestore, saveJobToFirestore, deleteJobFromFirestore, updateRequestInFirestore, fetchSystemBadges, saveSystemBadge, deleteSystemBadge, OperationType, saveEventToFirestore, deleteEventFromFirestore, savePolicyDocumentToFirestore, deletePolicyDocumentFromFirestore, fetchVolunteerRegistrationsFromFirestore, updateVolunteerRegistrationStatusInFirestore, fetchGalleryImagesFromFirestore, saveGalleryImageToFirestore, deleteGalleryImageFromFirestore } from "../lib/firebaseSync";
 import { googleSignIn, getAccessToken } from "../lib/googleAuth";
 import { sendSmsNotification, sendEmailNotification } from "../lib/email";
 import { auth } from "../lib/firebase";
@@ -24,6 +24,9 @@ import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { syncDriveFolderToFirestore, fetchSyncedBrainDocuments, DEFAULT_FOLDER_ID, BrainDocument } from "../lib/brainSync";
 import { fuzzyMatch, smartSortRequests, searchRank } from "../utils/algorithms";
 import { AccessLog, getOrCreateAccessLogs, simulateIncomingLiveVisitor } from "../lib/analyticsSync";
+import { safeParseDate, formatDateVN } from "../lib/dateUtils";
+import { convertToDirectDriveLink, uploadFileToDrive } from "../lib/imageUtils";
+import { uploadImageToStorage } from "../lib/firebaseSync";
 
 interface AdminPanelProps {
   events?: CalendarEvent[];
@@ -59,7 +62,7 @@ interface AdminPanelProps {
   onUpdatePartyContribution?: (id: string, updates: Partial<PartyContribution>) => Promise<void>;
 }
 
-type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "brain" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers" | "imageUpload";
+type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "brain" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers" | "imageUpload" | "gallery";
 
 
 interface ActivityLog {
@@ -308,6 +311,10 @@ export default function AdminPanel({
   
   // Local copies for editing
   const [campaignsList, setCampaignsList] = useState<Campaign[]>(allCampaigns);
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [isDriveConnected, setIsDriveConnected] = useState(!!sessionStorage.getItem('google_access_token'));
+  const [gallerySearchQuery, setGallerySearchQuery] = useState("");
   const [jobsList, setJobsList] = useState<JobListing[]>(allJobs);
   const [requestsList, setRequestsList] = useState<CitizenRequest[]>(allRequests);
 
@@ -440,7 +447,7 @@ export default function AdminPanel({
     setLoadingVolunteers(true);
     try {
       const regs = await fetchVolunteerRegistrationsFromFirestore();
-      regs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      regs.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
       setVolunteerRegistrations(regs);
     } catch (err) {
       console.error("Error fetching volunteer registrations:", err);
@@ -540,6 +547,9 @@ export default function AdminPanel({
   const [manualNewsImageUrl, setManualNewsImageUrl] = useState("");
   const [isUploadingManualNewsImage, setIsUploadingManualNewsImage] = useState(false);
   const [isUploadingDriveImage, setIsUploadingDriveImage] = useState(false);
+  const [isUploadingCampImage, setIsUploadingCampImage] = useState(false);
+  const [isUploadingJobImage, setIsUploadingJobImage] = useState(false);
+  const [isUploadingPartnerImage, setIsUploadingPartnerImage] = useState(false);
   const [uploadedDriveImageUrl, setUploadedDriveImageUrl] = useState("");
   const [manualNewsSourceUrl, setManualNewsSourceUrl] = useState("");
   const [newsSearchQuery, setNewsSearchQuery] = useState("");
@@ -584,9 +594,9 @@ export default function AdminPanel({
     // Sort order
     result.sort((a, b) => {
       if (newsSortOrder === "newest") {
-        return new Date(b.publishedAt || b.date).getTime() - new Date(a.publishedAt || a.date).getTime();
+        return safeParseDate(b.publishedAt || b.date) - safeParseDate(a.publishedAt || a.date);
       } else if (newsSortOrder === "oldest") {
-        return new Date(a.publishedAt || a.date).getTime() - new Date(b.publishedAt || b.date).getTime();
+        return safeParseDate(a.publishedAt || a.date) - safeParseDate(b.publishedAt || b.date);
       } else if (newsSortOrder === "title-asc") {
         return a.title.localeCompare(b.title, 'vi');
       } else if (newsSortOrder === "title-desc") {
@@ -824,6 +834,10 @@ export default function AdminPanel({
     ];
 
     const loadData = async () => {
+      if (!hasAdminPrivilege) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const usersRes = await fetchAllUserProfiles().catch(e => {
@@ -863,6 +877,13 @@ export default function AdminPanel({
         }
       } catch (e) {
         console.warn("Could not fetch config:", e);
+      }
+      
+      try {
+        const galleryRes = await fetchGalleryImagesFromFirestore();
+        setGalleryImages(galleryRes);
+      } catch (e) {
+        console.error("Lỗi tải thư viện ảnh:", e);
       }
       
       setLoading(false);
@@ -1223,6 +1244,83 @@ export default function AdminPanel({
       showFeedback("Lỗi xóa tin việc làm.", true);
     }
     });
+  };
+
+  const handleDeleteGalleryImage = (id: string) => {
+    showConfirm("Xóa ảnh thư viện", "Bạn có chắc chắn muốn xóa ảnh này khỏi thư viện cộng đồng không?", async () => {
+      try {
+        await deleteGalleryImageFromFirestore(id);
+        setGalleryImages(prev => prev.filter(img => img.id !== id));
+        addActivityLog("Quản lý Thư viện", `Đã xóa ảnh mã số [${id}] khỏi Thư viện cộng đồng`, "warning");
+        showFeedback("🗑️ Đã xóa ảnh thành công!");
+      } catch (e) {
+        console.error(e);
+        showFeedback("Lỗi khi xóa ảnh.", true);
+      }
+    });
+  };
+
+  const handleConnectDrive = async () => {
+    try {
+      // Direct call to reduce popup blocking risk
+      const authResult = await googleSignIn();
+      if (authResult?.accessToken) {
+        setIsDriveConnected(true);
+        showFeedback("✅ Đã kết nối Google Drive thành công!");
+      }
+    } catch (e) {
+      console.error("Drive Auth Error:", e);
+      if (String(e).includes("popup-blocked") || String(e).includes("cancelled-by-user")) {
+        showFeedback("❌ Cửa sổ xác thực bị chặn hoặc bị đóng. Nếu vẫn lỗi, hãy nhấn 'Mở trong tab mới' (nút ở góc trên bên phải) và thử lại.", true);
+      } else {
+        showFeedback("❌ Lỗi kết nối Drive: " + (e.message || "Vui lòng thử lại"), true);
+      }
+    }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingGallery(true);
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        throw new Error("Vui lòng nhấn 'Kết nối Google Drive' trước khi tải ảnh.");
+      }
+      
+      // Use the specific folder ID shared by the user
+      const COMMUNITY_FOLDER_ID = "1YhliVml5OEHZWJ_Od9w9-KFVKXmLwxkJ";
+      
+      showFeedback("🔄 Đang tải ảnh lên Google Drive...");
+      const driveFileId = await uploadFileToDrive(token, file, COMMUNITY_FOLDER_ID);
+      
+      if (!driveFileId) throw new Error("Failed to upload to Drive");
+
+      const directUrl = `https://lh3.googleusercontent.com/d/${driveFileId}`;
+      
+      const newImage: GalleryImage = {
+        id: driveFileId,
+        url: directUrl,
+        title: file.name.split('.')[0] || "Ảnh cộng đồng",
+        description: `Ảnh được tải lên bởi ${currentUser?.fullName || "Quản trị viên"}`,
+        authorName: currentUser?.fullName || "Quản trị viên",
+        createdAt: new Date().toISOString(),
+        authorId: currentUser?.uid
+      };
+
+      await saveGalleryImageToFirestore(newImage);
+      setGalleryImages(prev => [newImage, ...prev]);
+      
+      addActivityLog("Quản lý Thư viện", `Đã tải lên ảnh mới: "${newImage.title}" vào Thư viện cộng đồng`, "success");
+      showFeedback("✅ Đã tải ảnh lên Thư viện thành công!");
+    } catch (e) {
+      console.error("Lỗi upload gallery:", e);
+      showFeedback("❌ Lỗi tải ảnh: " + (e.message || "Không xác định"), true);
+    } finally {
+      setIsUploadingGallery(false);
+      if (e.target) e.target.value = "";
+    }
   };
 
   // 5. Advanced request management status updating
@@ -2617,13 +2715,39 @@ export default function AdminPanel({
 
                           <div className="md:col-span-12 space-y-1">
                             <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">Hình ảnh minh họa (URL)</label>
-                            <input 
-                              type="text" 
-                              value={campImageUrl} 
-                              onChange={(e) => setCampImageUrl(e.target.value)}
-                              placeholder="https://example.com/image.jpg"
-                              className="w-full text-xs px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none"
-                            />
+                            <div className="flex gap-2">
+                              <input 
+                                type="text" 
+                                value={campImageUrl} 
+                                onChange={(e) => setCampImageUrl(convertToDirectDriveLink(e.target.value))}
+                                placeholder="https://example.com/image.jpg"
+                                className="flex-1 text-xs px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none"
+                              />
+                              <label className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-[10px] font-bold px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center shrink-0 border border-sky-100 shadow-3xs">
+                                <span>{isUploadingCampImage ? "..." : "Tải lên"}</span>
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden"
+                                  disabled={isUploadingCampImage}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setIsUploadingCampImage(true);
+                                      try {
+                                        const downloadUrl = await uploadImageToStorage(file, "campaigns");
+                                        setCampImageUrl(downloadUrl);
+                                      } catch (error) {
+                                        console.error(error);
+                                        alert("Lỗi tải ảnh lên Storage");
+                                      } finally {
+                                        setIsUploadingCampImage(false);
+                                      }
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </div>
                           </div>
                           <div className="md:col-span-12 space-y-1">
                             <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">Nội dung / Lời kêu gọi cụ thể</label>
@@ -2912,6 +3036,42 @@ export default function AdminPanel({
                               required
                             />
                           </div>
+                          <div className="md:col-span-12 space-y-1">
+                            <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">Đường dẫn hình ảnh minh họa (URL)</label>
+                            <div className="flex gap-2">
+                              <input 
+                                type="text" 
+                                value={jobImageUrl} 
+                                onChange={(e) => setJobImageUrl(convertToDirectDriveLink(e.target.value))}
+                                placeholder="Dán link ảnh hoặc link Google Drive vào đây..."
+                                className="flex-1 text-xs px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none"
+                              />
+                              <label className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-[10px] font-bold px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center shrink-0 border border-sky-100 shadow-3xs">
+                                <span>{isUploadingJobImage ? "..." : "Tải lên"}</span>
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden"
+                                  disabled={isUploadingJobImage}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setIsUploadingJobImage(true);
+                                      try {
+                                        const downloadUrl = await uploadImageToStorage(file, "jobs");
+                                        setJobImageUrl(downloadUrl);
+                                      } catch (error) {
+                                        console.error(error);
+                                        alert("Lỗi tải ảnh lên Storage");
+                                      } finally {
+                                        setIsUploadingJobImage(false);
+                                      }
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </div>
+                          </div>
                           <div className="md:col-span-12 flex justify-end">
                             <button 
                               type="submit"
@@ -2983,6 +3143,15 @@ export default function AdminPanel({
                                 type="text"
                                 value={editingJob.contact}
                                 onChange={(e) => setEditingJob(prev => prev ? { ...prev, contact: e.target.value } : null)}
+                                className="w-full text-xs px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none"
+                              />
+                            </div>
+                            <div className="md:col-span-2 space-y-1">
+                              <label className="block text-[9px] font-bold uppercase text-slate-500">Hình ảnh minh họa (URL)</label>
+                              <input 
+                                type="text"
+                                value={editingJob.imageUrl || ""}
+                                onChange={(e) => setEditingJob(prev => prev ? { ...prev, imageUrl: convertToDirectDriveLink(e.target.value) } : null)}
                                 className="w-full text-xs px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none"
                               />
                             </div>
@@ -3816,7 +3985,10 @@ export default function AdminPanel({
                       transition={{ duration: 0.3 }}
                       className="space-y-6"
                     >
-                      <PushNotificationCenter onRequestsUpdated={onRefreshRequests} />
+                      <PushNotificationCenter 
+                        onRequestsUpdated={onRefreshRequests} 
+                        requests={allRequests} 
+                      />
                     </motion.div>
 
                   )}
@@ -3990,7 +4162,7 @@ export default function AdminPanel({
                                     <input
                                       type="text"
                                       value={manualNewsImageUrl}
-                                      onChange={(e) => setManualNewsImageUrl(e.target.value)}
+                                      onChange={(e) => setManualNewsImageUrl(convertToDirectDriveLink(e.target.value))}
                                       placeholder="URL hình ảnh (VD: https://lh3.googleusercontent.com/...)"
                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-2xl text-xs focus:outline-none transition-all font-light"
                                     />
@@ -4001,75 +4173,16 @@ export default function AdminPanel({
                                         accept="image/*" 
                                         className="hidden"
                                         disabled={isUploadingManualNewsImage}
-                                        onClick={async (e) => { const token = await getAccessToken(); if (!token) { e.preventDefault(); try { await googleSignIn(); alert("Đã kết nối Google Drive! Vui lòng nhấn chọn ảnh lại."); } catch (err) { alert("Lỗi: " + (err.message || err)); } } }}
                                         onChange={async (e) => {
                                           const file = e.target.files?.[0];
                                           if (file) {
                                             setIsUploadingManualNewsImage(true);
                                             try {
-                                              let token = await getAccessToken();
-                                              if (!token) {
-                                                const authResult = await googleSignIn();
-                                                token = authResult?.accessToken || null;
-                                              }
-                                              if (!token) throw new Error("Authentication failed");
-                                              
-                                              const FOLDER_ID = "1LZQhcPm0WiMd1IiqLxW2MrNl6J9PjhrS";
-                                              let metadata = { name: `${Date.now()}_${file.name}`, parents: [FOLDER_ID] };
-                                              
-                                              // 1. Create file metadata
-                                              let createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                                                method: 'POST',
-                                                headers: {
-                                                  'Authorization': `Bearer ${token}`,
-                                                  'Content-Type': 'application/json'
-                                                },
-                                                body: JSON.stringify(metadata)
-                                              });
-                                              let createData = await createRes.json();
-                                              
-                                              if (!createData.id && createData.error) {
-                                                console.warn("Falling back to root drive folder", createData.error);
-                                                metadata = { name: `${Date.now()}_${file.name}` } as any;
-                                                createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                                                  method: 'POST',
-                                                  headers: {
-                                                    'Authorization': `Bearer ${token}`,
-                                                    'Content-Type': 'application/json'
-                                                  },
-                                                  body: JSON.stringify(metadata)
-                                                });
-                                                createData = await createRes.json();
-                                              }
-                                              
-                                              if (!createData.id) throw new Error(createData.error?.message || "Failed to create file");
-                                              
-                                              // 2. Upload file content
-                                              const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${createData.id}?uploadType=media`, {
-                                                method: 'PATCH',
-                                                headers: {
-                                                  'Authorization': `Bearer ${token}`,
-                                                  'Content-Type': file.type
-                                                },
-                                                body: file
-                                              });
-                                              
-                                              if (uploadRes.ok) {
-                                                await fetch(`https://www.googleapis.com/drive/v3/files/${createData.id}/permissions`, {
-                                                  method: 'POST',
-                                                  headers: {
-                                                    'Authorization': `Bearer ${token}`,
-                                                    'Content-Type': 'application/json'
-                                                  },
-                                                  body: JSON.stringify({ role: 'reader', type: 'anyone' })
-                                                });
-                                                setManualNewsImageUrl(`https://drive.google.com/uc?id=${createData.id}`);
-                                              } else {
-                                                throw new Error("Upload failed");
-                                              }
+                                              const downloadUrl = await uploadImageToStorage(file, "news");
+                                              setManualNewsImageUrl(downloadUrl);
                                             } catch (error) {
                                               console.error("Upload error", error);
-                                              alert("Không thể tải lên hình ảnh. Vui lòng cấp quyền Google Drive và thử lại.");
+                                              alert("Không thể tải lên hình ảnh lên Storage.");
                                             } finally {
                                               setIsUploadingManualNewsImage(false);
                                             }
@@ -6173,13 +6286,39 @@ export default function AdminPanel({
 
                               <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Logo URL (Hình ảnh biểu trưng)</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="Link hình ảnh logo đơn vị..."
-                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                                  value={partnerImageUrl}
-                                  onChange={(e) => setPartnerImageUrl(e.target.value)}
-                                />
+                                <div className="flex gap-2">
+                                  <input 
+                                    type="text" 
+                                    placeholder="Link hình ảnh logo đơn vị..."
+                                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                    value={partnerImageUrl}
+                                    onChange={(e) => setPartnerImageUrl(convertToDirectDriveLink(e.target.value))}
+                                  />
+                                  <label className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-[10px] font-bold px-3 py-2 rounded-xl transition cursor-pointer flex items-center shrink-0 border border-sky-100 shadow-3xs">
+                                    <span>{isUploadingPartnerImage ? "..." : "Tải lên"}</span>
+                                    <input 
+                                      type="file" 
+                                      accept="image/*" 
+                                      className="hidden"
+                                      disabled={isUploadingPartnerImage}
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          setIsUploadingPartnerImage(true);
+                                          try {
+                                            const downloadUrl = await uploadImageToStorage(file, "partners");
+                                            setPartnerImageUrl(downloadUrl);
+                                          } catch (error) {
+                                            console.error(error);
+                                            alert("Lỗi tải ảnh");
+                                          } finally {
+                                            setIsUploadingPartnerImage(false);
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                </div>
                               </div>
                             </div>
 
@@ -6643,6 +6782,148 @@ export default function AdminPanel({
                     </motion.div>
                   )}
                 
+                  {activeTab === "gallery" && (
+                    <motion.div
+                      key="gallery"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-5 gap-4">
+                        <div>
+                          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <span className="text-emerald-500">🖼️</span> Quản Lý Thư Viện Ảnh Cộng Đồng
+                          </h2>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Quản lý hình ảnh trong thư mục Drive chung và hiển thị lên Thư viện ảnh ở trang chủ.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {!isDriveConnected ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <button 
+                                onClick={handleConnectDrive}
+                                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
+                              >
+                                <Link2 className="w-4 h-4" />
+                                <span>Kết nối Google Drive</span>
+                              </button>
+                              <span className="text-[9px] text-rose-500 font-medium">Lỗi Popup? Nhấn "Mở trong tab mới"</span>
+                            </div>
+                          ) : (
+                            <>
+                              <a 
+                                href="https://drive.google.com/drive/folders/1YhliVml5OEHZWJ_Od9w9-KFVKXmLwxkJ" 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Mở Folder Drive
+                              </a>
+                              <label className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer">
+                                {isUploadingGallery ? (
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Plus className="w-4 h-4" />
+                                )}
+                                <span>{isUploadingGallery ? "Đang tải lên..." : "Tải Ảnh Mới Lên Drive"}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  disabled={isUploadingGallery}
+                                  onChange={handleGalleryUpload}
+                                />
+                              </label>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs text-left">
+                        <div className="flex items-center justify-between mb-6 gap-4">
+                          <div className="relative flex-1 max-w-md">
+                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                            <input
+                              type="text"
+                              value={gallerySearchQuery}
+                              onChange={(e) => setGallerySearchQuery(e.target.value)}
+                              placeholder="Tìm kiếm theo tên ảnh, người đăng..."
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-700 focus:border-emerald-500 outline-none transition-colors"
+                            />
+                          </div>
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            Tổng cộng: {galleryImages.length} ảnh
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {galleryImages
+                            .filter(img => 
+                              img.title.toLowerCase().includes(gallerySearchQuery.toLowerCase()) ||
+                              img.authorName.toLowerCase().includes(gallerySearchQuery.toLowerCase())
+                            )
+                            .map((img) => (
+                              <div key={img.id} className="group bg-slate-50 border border-slate-200/60 rounded-2xl overflow-hidden hover:shadow-lg hover:border-emerald-200 transition-all">
+                                <div className="aspect-square w-full relative bg-slate-200 overflow-hidden">
+                                  <img 
+                                    src={img.url} 
+                                    alt={img.title} 
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                    loading="lazy"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                    <button 
+                                      onClick={() => handleDeleteGalleryImage(img.id)}
+                                      className="p-2.5 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition shadow-lg"
+                                      title="Xóa ảnh"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                    <a 
+                                      href={img.url} 
+                                      target="_blank" 
+                                      rel="noreferrer"
+                                      className="p-2.5 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition shadow-lg"
+                                      title="Xem ảnh gốc"
+                                    >
+                                      <ExternalLink className="w-4 h-4" />
+                                    </a>
+                                  </div>
+                                </div>
+                                <div className="p-4 space-y-2">
+                                  <h4 className="text-xs font-bold text-slate-800 line-clamp-1" title={img.title}>
+                                    {img.title}
+                                  </h4>
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                      <Users className="w-3 h-3" /> {img.authorName}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      {new Date(img.createdAt).toLocaleDateString("vi-VN")}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                          {galleryImages.length === 0 && (
+                            <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 space-y-4">
+                              <ImagePlus className="w-16 h-16 opacity-20" />
+                              <div className="text-center">
+                                <p className="font-bold text-sm">Thư viện ảnh đang trống</p>
+                                <p className="text-xs">Hãy tải những hình ảnh hoạt động cộng đồng đầu tiên lên Drive.</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
                   {activeTab === "imageUpload" && (
                     <motion.div
                       key="imageUpload"
@@ -6663,41 +6944,44 @@ export default function AdminPanel({
                         </div>
                         
                         <div className="max-w-xl mx-auto space-y-6">
-                          <div className="border-2 border-dashed border-slate-300 rounded-3xl p-10 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors">
-                            <ImagePlus className="w-12 h-12 text-slate-300 mb-4" />
-                            <p className="text-sm font-semibold text-slate-700 mb-2">Kéo thả ảnh vào đây hoặc</p>
-                            <label className="bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold px-6 py-3 rounded-xl transition cursor-pointer shadow-md inline-flex items-center gap-2">
-                              <span>{isUploadingDriveImage ? "Đang tải lên..." : "Chọn ảnh từ máy tính"}</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                disabled={isUploadingDriveImage}
-                                onClick={async (e) => {
-                                  const token = await getAccessToken();
-                                  if (!token) {
-                                    e.preventDefault();
-                                    try {
-                                      await googleSignIn();
-                                      alert("Đã kết nối Google Drive thành công! Vui lòng nhấn 'Chọn ảnh' lại để tải lên.");
-                                    } catch (err) {
-                                      alert("Không thể kết nối Google Drive: " + (err.message || err));
-                                    }
-                                  }
-                                }}
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    setIsUploadingDriveImage(true);
-                                    try {
-                                      let token = await getAccessToken();
-                                      if (!token) {
-                                        const authResult = await googleSignIn();
-                                        token = authResult?.accessToken || null;
-                                      }
-                                      if (!token) throw new Error("Authentication failed");
-                                      
-                                      const FOLDER_ID = "1LZQhcPm0WiMd1IiqLxW2MrNl6J9PjhrS";
+                          {!isDriveConnected ? (
+                            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
+                              <div className="bg-emerald-50 p-4 rounded-full mb-4">
+                                <ImagePlus className="w-10 h-10 text-emerald-500" />
+                              </div>
+                              <h3 className="text-lg font-bold text-slate-800 mb-2">Chưa kết nối Google Drive</h3>
+                              <p className="text-sm text-slate-500 mb-6 max-w-sm">
+                                Bạn cần kết nối tài khoản Google để tải ảnh trực tiếp vào Thư mục Drive chung. 
+                                <br/><span className="text-[10px] text-rose-500 mt-2 block">Lưu ý: Nếu popup bị chặn, hãy nhấn "Mở trong tab mới" ở góc trên màn hình.</span>
+                              </p>
+                              <button 
+                                onClick={handleConnectDrive}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2"
+                              >
+                                <Link2 className="w-5 h-5" />
+                                Kết nối Google Drive
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="border-2 border-dashed border-slate-300 rounded-3xl p-10 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors">
+                              <ImagePlus className="w-12 h-12 text-slate-300 mb-4" />
+                              <p className="text-sm font-semibold text-slate-700 mb-2">Kéo thả ảnh vào đây hoặc</p>
+                              <label className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-6 py-3 rounded-xl transition cursor-pointer shadow-md inline-flex items-center gap-2">
+                                <span>{isUploadingDriveImage ? "Đang tải lên..." : "Chọn ảnh từ máy tính"}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  disabled={isUploadingDriveImage}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setIsUploadingDriveImage(true);
+                                      try {
+                                        let token = await getAccessToken();
+                                        if (!token) throw new Error("Vui lòng kết nối lại Google Drive.");
+                                        
+                                        const FOLDER_ID = "1LZQhcPm0WiMd1IiqLxW2MrNl6J9PjhrS";
                                       const metadata = { name: `${Date.now()}_${file.name}`, parents: [FOLDER_ID] };
                                       
                                       let createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
@@ -6745,8 +7029,8 @@ export default function AdminPanel({
                                           body: JSON.stringify({ role: 'reader', type: 'anyone' })
                                         });
                                         
-                                        const url = `https://drive.google.com/uc?export=view&id=${createData.id}`;
-                                        setUploadedDriveImageUrl(url);
+                                        const directUrl = `https://lh3.googleusercontent.com/d/${createData.id}`;
+                                        setUploadedDriveImageUrl(directUrl);
                                       } else {
                                         throw new Error("Upload content failed");
                                       }
@@ -6763,12 +7047,14 @@ export default function AdminPanel({
                             </label>
                           </div>
 
-                          {uploadedDriveImageUrl && (
-                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
-                              <h3 className="text-emerald-800 font-bold mb-4 flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5" />
-                                Tải ảnh thành công!
-                              </h3>
+                        )}
+
+                        {uploadedDriveImageUrl && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
+                            <h3 className="text-emerald-800 font-bold mb-4 flex items-center gap-2">
+                              <CheckCircle2 className="w-5 h-5" />
+                              Tải ảnh thành công!
+                            </h3>
                               <div className="aspect-video w-full max-w-sm mx-auto bg-slate-100 rounded-xl overflow-hidden mb-4 border border-emerald-100 flex items-center justify-center relative">
                                 <img src={uploadedDriveImageUrl} alt="Uploaded" className="max-w-full max-h-full object-contain" />
                               </div>

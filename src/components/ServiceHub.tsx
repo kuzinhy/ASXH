@@ -377,7 +377,7 @@ export default function ServiceHub({
     basePremium: number;
     totalPremiumBeforeSubsidy: number;
     governmentSubsidy: number;
-    binhDuongSubsidy: number;
+    localSubsidy: number;
     finalCitizenPay: number;
     breakdown: { personIndex: number; costBeforeSubsidy: number; finalPay: number }[];
   } | null>(null);
@@ -724,13 +724,13 @@ export default function ServiceHub({
       const costBeforeSubsidy = Math.round(standardFeePerYear * multiplier);
       
       let subsidyPercent = 0;
-      let binhDuongSubsidyPercent = 0;
+      let localSubsidyPercent = 0;
       
       if (bhytSubject === "poor") {
         subsidyPercent = 1.0;
       } else if (bhytSubject === "near_poor") {
         subsidyPercent = 0.7;
-        binhDuongSubsidyPercent = 0.3; // Binh Duong covers remaining 30%
+        localSubsidyPercent = 0.3; // Local government covers remaining 30%
       } else if (bhytSubject === "student") {
         subsidyPercent = 0.3;
       } else if (bhytSubject === "children_under_6" || bhytSubject === "social_protection") {
@@ -738,7 +738,7 @@ export default function ServiceHub({
       }
 
       const govSubsidyVal = Math.round(costBeforeSubsidy * subsidyPercent);
-      const bdSubsidyVal = Math.round(costBeforeSubsidy * binhDuongSubsidyPercent);
+      const bdSubsidyVal = Math.round(costBeforeSubsidy * localSubsidyPercent);
       const finalPay = Math.max(0, costBeforeSubsidy - govSubsidyVal - bdSubsidyVal);
 
       totalBeforeSubsidy += costBeforeSubsidy;
@@ -754,9 +754,9 @@ export default function ServiceHub({
       return sum + Math.round(item.costBeforeSubsidy * subsidyPercent);
     }, 0);
 
-    const totalBinhDuongSubsidy = breakdownList.reduce((sum, item) => {
-      const binhDuongSubsidyPercent = bhytSubject === "near_poor" ? 0.3 : 0;
-      return sum + Math.round(item.costBeforeSubsidy * binhDuongSubsidyPercent);
+    const totalLocalSubsidy = breakdownList.reduce((sum, item) => {
+      const localSubsidyPercent = bhytSubject === "near_poor" ? 0.3 : 0;
+      return sum + Math.round(item.costBeforeSubsidy * localSubsidyPercent);
     }, 0);
 
     const totalCitizenPay = breakdownList.reduce((sum, item) => sum + item.finalPay, 0);
@@ -765,7 +765,7 @@ export default function ServiceHub({
       basePremium: standardFeePerYear,
       totalPremiumBeforeSubsidy: totalBeforeSubsidy,
       governmentSubsidy: totalGovernmentSubsidy,
-      binhDuongSubsidy: totalBinhDuongSubsidy,
+      localSubsidy: totalLocalSubsidy,
       finalCitizenPay: totalCitizenPay,
       breakdown: breakdownList
     });
@@ -1561,10 +1561,10 @@ export default function ServiceHub({
                               <span className="font-semibold text-slate-800">-{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(bhytResult.governmentSubsidy)}</span>
                             </div>
                           )}
-                          {bhytResult.binhDuongSubsidy > 0 && (
+                          {bhytResult.localSubsidy > 0 && (
                             <div className="flex justify-between">
                               <span>Thành phố Hồ Chí Minh hỗ trợ đặc thù:</span>
-                              <span className="font-semibold text-teal-500">-{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(bhytResult.binhDuongSubsidy)}</span>
+                              <span className="font-semibold text-teal-500">-{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(bhytResult.localSubsidy)}</span>
                             </div>
                           )}
                           <div className="flex justify-between text-[10px] font-mono border-t border-dashed border-slate-200 pt-1">

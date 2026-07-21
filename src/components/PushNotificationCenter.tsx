@@ -29,9 +29,10 @@ const DEFAULT_VAPID_KEY = "BPMX_o-0f3r5u1-v2vS3pT4_FCM_Web_Push_Default_Placehol
 
 interface PushNotificationCenterProps {
   onRequestsUpdated?: () => void;
+  requests: CitizenRequest[];
 }
 
-export default function PushNotificationCenter({ onRequestsUpdated }: PushNotificationCenterProps) {
+export default function PushNotificationCenter({ onRequestsUpdated, requests }: PushNotificationCenterProps) {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [token, setToken] = useState<string>("");
   const [vapidKey, setVapidKey] = useState<string>(DEFAULT_VAPID_KEY);
@@ -44,14 +45,13 @@ export default function PushNotificationCenter({ onRequestsUpdated }: PushNotifi
   const [showConfig, setShowConfig] = useState<boolean>(false);
 
   // Simulation & Admin Control states
-  const [allRequests, setAllRequests] = useState<CitizenRequest[]>([]);
   const [selectedReqId, setSelectedReqId] = useState<string>("");
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
   
   // Internal push logs for the simulator console
   const [pushLogs, setPushLogs] = useState<{ id: string; time: string; title: string; body: string; type: "sent" | "received" | "error" }[]>([]);
 
-  // Local active toast alerts triggered by foreground messages
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
+  const allRequests = requests;
   const [activeToast, setActiveToast] = useState<{ id: string; title: string; body: string } | null>(null);
 
   // Sync notification permission state
@@ -61,51 +61,12 @@ export default function PushNotificationCenter({ onRequestsUpdated }: PushNotifi
     }
   }, []);
 
-  // Fetch requests for Admin Simulation from Firestore
+  // Update selected request if none selected or current is gone
   useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "requests"));
-        const reqList: CitizenRequest[] = [];
-        querySnapshot.forEach((docSnap) => {
-          reqList.push(docSnap.data() as CitizenRequest);
-        });
-        // Sort newest first
-        reqList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setAllRequests(reqList);
-        if (reqList.length > 0 && !selectedReqId) {
-          setSelectedReqId(reqList[0].id);
-        }
-      } catch (err) {
-        console.warn("Could not retrieve requests for simulator from Firestore directly:", err);
-        // Fallback to localStorage if Firestore has issue
-        const localData = localStorage.getItem("phuloi_requests");
-        if (localData) {
-          try {
-            const list = JSON.parse(localData) as CitizenRequest[];
-            setAllRequests(list);
-            if (list.length > 0) setSelectedReqId(list[0].id);
-          } catch (_) {}
-        }
-      }
-    };
-
-    fetchRequests();
-    
-    // Subscribe to real-time updates of requests
-    const unsubscribe = onSnapshot(collection(db, "requests"), (snapshot) => {
-      const list: CitizenRequest[] = [];
-      snapshot.forEach((d) => {
-        list.push(d.data() as CitizenRequest);
-      });
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setAllRequests(list);
-    }, (error) => {
-      console.log("Real-time requests subscription error: ", error);
-    });
-
-    return () => unsubscribe();
-  }, [selectedReqId]);
+    if (requests.length > 0 && (!selectedReqId || !requests.some(r => r.id === selectedReqId))) {
+      setSelectedReqId(requests[0].id);
+    }
+  }, [requests, selectedReqId]);
 
   // Handle Foreground Messages from FCM
   useEffect(() => {

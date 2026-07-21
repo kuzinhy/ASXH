@@ -89,6 +89,7 @@ import {
   Edit3,
   MessageSquare,
   ImagePlus,
+  Link2,
   HeartHandshake
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -96,6 +97,7 @@ import { collection, onSnapshot, doc } from "firebase/firestore";
 
 import AdminPanel from "./components/AdminPanel";
 import { playNotificationSound, playSuccessSound } from "./utils/sound";
+import { safeParseDate } from "./lib/dateUtils";
 
 // Offline Fallback Seed Data to ensure perfect operation on Vercel
 const SEED_REQUESTS: CitizenRequest[] = MTTQ_REPORT_REQUESTS;
@@ -143,6 +145,91 @@ const SEED_JOBS: JobListing[] = [
       "Có thái độ phục vụ thân thiện, lịch sự."
     ],
     contact: "Bưu cục Giao Hàng Nhanh Phú Lợi - ĐT: 0909.112.xxx"
+  }
+];
+
+const DEFAULT_NEWS_ARTICLES: NewsArticle[] = [
+  {
+    id: "news-1",
+    title: "Phường Phú Lợi Tổ Chức Phiên Chợ 0 Đồng Ấm Áp Nghĩa Tình",
+    body: "Nhằm chia sẻ khó khăn với bà con nhân dịp lễ, Ủy ban Mặt trận Tổ quốc Việt Nam phường Phú Lợi phối hợp cùng các nhà hảo tâm tổ chức Phiên chợ 0 đồng chăm lo cho hơn 200 hộ nghèo, hộ cận nghèo, người khuyết tật trên địa bàn phường. Mỗi hộ dân được tự do chọn lựa các mặt hàng nhu yếu phẩm thiết thực trị giá 400.000 đồng/phần.",
+    category: "Cứu trợ",
+    imageUrl: "https://lh3.googleusercontent.com/d/1VdHot14lAHtlOODpodU5W1OAHIKuCwVE",
+    date: "10/07/2026",
+    originalUrl: "https://www.facebook.com/phuongphuloi/posts/101",
+    status: "published"
+  },
+  {
+    id: "news-2",
+    title: "Ra Quân 'Ngày Thứ Bảy Văn Minh' Tháo Dỡ Biển Quảng Cáo Sai Quy Định",
+    body: "Đoàn viên thanh niên, lực lượng dân quân và nhân dân phường Phú Lợi đã đồng loạt ra quân thực hiện Ngày thứ bảy văn minh tại tuyến đường Huỳnh Văn Lũy. Các lực lượng đã thực hiện bóc xóa biển quảng cáo, rao vặt trái phép, dọn dẹp vệ sinh môi trường, góp phần xây dựng mỹ quan đô thị xanh - sạch - đẹp.",
+    category: "Ngày thứ bảy văn minh",
+    imageUrl: "https://lh3.googleusercontent.com/d/1F075dRHArHGW3LhYsFfsj5poYTZIxKpJ",
+    date: "04/07/2026",
+    originalUrl: "https://www.facebook.com/phuongphuloi/posts/102",
+    status: "published"
+  },
+  {
+    id: "news-3",
+    title: "MTTQ Phường Phú Lợi Trao Tặng Nhà Đại Đoàn Kết Cho Hộ Cận Nghèo",
+    body: "Chiều ngày 15/07/2026, Ủy ban MTTQ Việt Nam phường Phú Lợi phối hợp cùng Ban điều hành khu phố tổ chức bàn giao căn nhà Đại đoàn kết cho gia đình bà Nguyễn Thị Huệ, ngụ tại khu phố 5. Căn nhà có diện tích 50m2 với kinh phí xây dựng 80 triệu đồng do Quỹ Vì người nghèo vận động tài trợ.",
+    category: "An sinh xã hội",
+    imageUrl: "https://lh3.googleusercontent.com/d/1MT0t2jwh0jomWuJmtMxyT59XTjDHJ2AP",
+    date: "15/07/2026",
+    originalUrl: "https://www.facebook.com/phuongphuloi/posts/103",
+    status: "published"
+  },
+  {
+    id: "news-4",
+    title: "Hội Nghị Tuyên Truyền Phổ Biến Pháp Luật Và Phòng Chống Tội Phạm",
+    body: "Ban thường trực Ủy ban MTTQ Việt Nam phường phối hợp cùng Công an phường tổ chức hội nghị tuyên truyền, phổ biến pháp luật về phòng chống tội phạm lừa đảo công nghệ cao trên không gian mạng cho hơn 150 người dân địa bàn, giúp nâng cao tinh thần cảnh giác.",
+    category: "Tuyên truyền",
+    imageUrl: "https://lh3.googleusercontent.com/d/1F075dRHArHGW3LhYsFfsj5poYTZIxKpJ",
+    date: "12/07/2026",
+    originalUrl: "https://www.facebook.com/phuongphuloi/posts/104",
+    status: "published"
+  }
+];
+
+const DEFAULT_EVENTS: CalendarEvent[] = [
+  {
+    id: "evt-1",
+    title: "Ngày thứ bảy văn minh",
+    date: "18/07/2026",
+    time: "07:00 - 11:00",
+    location: "Tuyến đường Huỳnh Văn Lũy",
+    type: "Ra quân",
+    description: "Dọn dẹp vệ sinh, bóc xóa biển quảng cáo sai quy định, trồng thêm cây xanh.",
+    iconName: "Users",
+    color: "bg-emerald-500",
+    textColor: "text-emerald-700",
+    bgColor: "bg-emerald-50"
+  },
+  {
+    id: "evt-2",
+    title: "Lễ Viếng Nghĩa Trang Liệt Sĩ",
+    date: "27/07/2026",
+    time: "06:30 - 08:30",
+    location: "Nghĩa trang Liệt sĩ Phường Phú Lợi, Thành phố Hồ Chí Minh",
+    type: "Kỷ niệm",
+    description: "Nhân kỷ niệm Ngày Thương binh - Liệt sĩ, dâng hương tưởng nhớ các anh hùng.",
+    iconName: "Star",
+    color: "bg-rose-500",
+    textColor: "text-rose-700",
+    bgColor: "bg-rose-50"
+  },
+  {
+    id: "evt-3",
+    title: "Ngày hội Đại đoàn kết toàn dân tộc",
+    date: "18/11/2026",
+    time: "08:00 - 11:30",
+    location: "Khu dân cư các Khu phố",
+    type: "Ngày hội",
+    description: "Giao lưu văn nghệ, tặng quà gia dịch khó khăn, biểu dương gia đình văn hóa.",
+    iconName: "Calendar",
+    color: "bg-slate-500",
+    textColor: "text-slate-800",
+    bgColor: "bg-slate-50"
   }
 ];
 
@@ -403,7 +490,16 @@ export default function App() {
       }
 
       if (cachedNews) setNewsArticle(JSON.parse(cachedNews));
+      else {
+        setNewsArticle(DEFAULT_NEWS_ARTICLES);
+        localStorage.setItem("phuloi_news_articles", JSON.stringify(DEFAULT_NEWS_ARTICLES));
+      }
+
       if (cachedEvents) setEvents(JSON.parse(cachedEvents));
+      else {
+        setEvents(DEFAULT_EVENTS);
+        localStorage.setItem("phuloi_events", JSON.stringify(DEFAULT_EVENTS));
+      }
       if (cachedConfig) setWebConfig(JSON.parse(cachedConfig));
       
       const cachedContributions = localStorage.getItem("phuloi_party_contributions");
@@ -638,93 +734,15 @@ export default function App() {
         // 1. Automatically seed database if campaigns are empty
         await seedDatabaseIfEmpty();
 
-        // 2. Fetch all collections in parallel (background refresh)
-        const [campsData, jobsData, reqsData, donsData, configData, eventsData, newsData, visitsData, partnersData, contributionsData, policyDocsData] = await Promise.all([
-
+        // 2. Fetch all collections in parallel (background refresh) using allSettled for robustness
+        const results = await Promise.allSettled([
           fetchAllCampaigns(),
           fetchAllJobs(),
           fetchAllRequests(),
           fetchAllDonations(),
           fetchWebConfig(),
-          fetchEventsFromFirestore([
-            {
-              id: "evt-1",
-              title: "Ngày thứ bảy văn minh",
-              date: "18/07/2026",
-              time: "07:00 - 11:00",
-              location: "Tuyến đường Huỳnh Văn Lũy",
-              type: "Ra quân",
-              description: "Dọn dẹp vệ sinh, bóc xóa biển quảng cáo sai quy định, trồng thêm cây xanh.",
-              iconName: "Users",
-              color: "bg-emerald-500",
-              textColor: "text-emerald-700",
-              bgColor: "bg-emerald-50"
-            },
-            {
-              id: "evt-2",
-              title: "Lễ Viếng Nghĩa Trang Liệt Sĩ",
-              date: "27/07/2026",
-              time: "06:30 - 08:30",
-              location: "Nghĩa trang Liệt sĩ Phường Phú Lợi, Thành phố Hồ Chí Minh",
-              type: "Kỷ niệm",
-              description: "Nhân kỷ niệm Ngày Thương binh - Liệt sĩ, dâng hương tưởng nhớ các anh hùng.",
-              iconName: "Star",
-              color: "bg-rose-500",
-              textColor: "text-rose-700",
-              bgColor: "bg-rose-50"
-            },
-            {
-              id: "evt-3",
-              title: "Ngày hội Đại đoàn kết toàn dân tộc",
-              date: "18/11/2026",
-              time: "08:00 - 11:30",
-              location: "Khu dân cư các Khu phố",
-              type: "Ngày hội",
-              description: "Giao lưu văn nghệ, tặng quà gia dịch khó khăn, biểu dương gia đình văn hóa.",
-              iconName: "Calendar",
-              color: "bg-slate-500",
-              textColor: "text-slate-800",
-              bgColor: "bg-slate-50"
-            }
-          ]),
-          fetchNewsArticleFromFirestore([
-            {
-              id: "news-1",
-              title: "Phường Phú Lợi Tổ Chức Phiên Chợ 0 Đồng Ấm Áp Nghĩa Tình",
-              body: "Nhằm chia sẻ khó khăn với bà con nhân dịp lễ, Ủy ban Mặt trận Tổ quốc Việt Nam phường Phú Lợi phối hợp cùng các nhà hảo tâm tổ chức Phiên chợ 0 đồng chăm lo cho hơn 200 hộ nghèo, hộ cận nghèo, người khuyết tật trên địa bàn phường. Mỗi hộ dân được tự do chọn lựa các mặt hàng nhu yếu phẩm thiết thực trị giá 400.000 đồng/phần.",
-              category: "Cứu trợ",
-              imageUrl: "https://lh3.googleusercontent.com/d/1VdHot14lAHtlOODpodU5W1OAHIKuCwVE",
-              date: "10/07/2026",
-              originalUrl: "https://www.facebook.com/phuongphuloi/posts/101"
-            },
-            {
-              id: "news-2",
-              title: "Ra Quân 'Ngày Thứ Bảy Văn Minh' Tháo Dỡ Biển Quảng Cáo Sai Quy Định",
-              body: "Đoàn viên thanh niên, lực lượng dân quân và nhân dân phường Phú Lợi đã đồng loạt ra quân thực hiện Ngày thứ bảy văn minh tại tuyến đường Huỳnh Văn Lũy. Các lực lượng đã thực hiện bóc xóa biển quảng cáo, rao vặt trái phép, dọn dẹp vệ sinh môi trường, góp phần xây dựng mỹ quan đô thị xanh - sạch - đẹp.",
-              category: "Ngày thứ bảy văn minh",
-              imageUrl: "https://lh3.googleusercontent.com/d/1F075dRHArHGW3LhYsFfsj5poYTZIxKpJ",
-              date: "04/07/2026",
-              originalUrl: "https://www.facebook.com/phuongphuloi/posts/102"
-            },
-            {
-              id: "news-3",
-              title: "MTTQ Phường Phú Lợi Trao Tặng Nhà Đại Đoàn Kết Cho Hộ Cận Nghèo",
-              body: "Chiều ngày 15/07/2026, Ủy ban MTTQ Việt Nam phường Phú Lợi phối hợp cùng Ban điều hành khu phố tổ chức bàn giao căn nhà Đại đoàn kết cho gia đình bà Nguyễn Thị Huệ, ngụ tại khu phố 5. Căn nhà có diện tích 50m2 với kinh phí xây dựng 80 triệu đồng do Quỹ Vì người nghèo vận động tài trợ.",
-              category: "An sinh xã hội",
-              imageUrl: "https://lh3.googleusercontent.com/d/1MT0t2jwh0jomWuJmtMxyT59XTjDHJ2AP",
-              date: "15/07/2026",
-              originalUrl: "https://www.facebook.com/phuongphuloi/posts/103"
-            },
-            {
-              id: "news-4",
-              title: "Hội Nghị Tuyên Truyền Phổ Biến Pháp Luật Và Phòng Chống Tội Phạm",
-              body: "Ban thường trực Ủy ban MTTQ Việt Nam phường phối hợp cùng Công an phường tổ chức hội nghị tuyên truyền, phổ biến pháp luật về phòng chống tội phạm lừa đảo công nghệ cao trên không gian mạng cho hơn 150 người dân địa bàn, giúp nâng cao tinh thần cảnh giác.",
-              category: "Tuyên truyền",
-              imageUrl: "https://lh3.googleusercontent.com/d/1F075dRHArHGW3LhYsFfsj5poYTZIxKpJ",
-              date: "12/07/2026",
-              originalUrl: "https://www.facebook.com/phuongphuloi/posts/104"
-            }
-          ]),
+          fetchEventsFromFirestore(DEFAULT_EVENTS),
+          fetchNewsArticleFromFirestore(DEFAULT_NEWS_ARTICLES),
           incrementVisitCount(),
           fetchOfficialPartnersFromFirestore(DEFAULT_OFFICIAL_PARTNERS),
           fetchPartyContributionsFromFirestore(),
@@ -732,36 +750,37 @@ export default function App() {
         ]);
 
         if (isMounted) {
-          setRequests(reqsData);
-          setCampaigns(campsData);
-          setDonations(donsData);
-          setJobs(jobsData);
-          if (contributionsData) {
-            setPartyContributions(contributionsData);
-            localStorage.setItem("phuloi_party_contributions", JSON.stringify(contributionsData));
+          const [
+            campsRes, jobsRes, reqsRes, donsRes, configRes, eventsRes, newsRes, visitsRes, partnersRes, contributionsRes, policyRes
+          ] = results;
+
+          if (campsRes.status === 'fulfilled') setCampaigns(campsRes.value);
+          if (jobsRes.status === 'fulfilled') setJobs(jobsRes.value);
+          if (reqsRes.status === 'fulfilled') setRequests(reqsRes.value);
+          if (donsRes.status === 'fulfilled') setDonations(donsRes.value);
+          if (configRes.status === 'fulfilled') {
+            setWebConfig(configRes.value);
+            localStorage.setItem("phuloi_web_config", JSON.stringify(configRes.value));
           }
-          if (policyDocsData) {
-            setPolicyDocuments(policyDocsData);
+          if (eventsRes.status === 'fulfilled') {
+            setEvents(eventsRes.value);
+            localStorage.setItem("phuloi_events", JSON.stringify(eventsRes.value));
           }
-          if (newsData) {
-            setNewsArticle(newsData);
-            localStorage.setItem("phuloi_news_articles", JSON.stringify(newsData));
+          if (newsRes.status === 'fulfilled') {
+            const sortedNews = newsRes.value.sort((a, b) => safeParseDate(b.date) - safeParseDate(a.date));
+            setNewsArticle(sortedNews);
+            localStorage.setItem("phuloi_news_articles", JSON.stringify(sortedNews));
           }
-          if (eventsData) {
-            setEvents(eventsData);
-            localStorage.setItem("phuloi_events", JSON.stringify(eventsData));
+          if (visitsRes.status === 'fulfilled') setVisitorStats(visitsRes.value);
+          if (partnersRes.status === 'fulfilled') {
+            setOfficialPartners(partnersRes.value);
+            localStorage.setItem("phuloi_official_partners", JSON.stringify(partnersRes.value));
           }
-          if (visitsData) {
-            setVisitorStats(visitsData);
+          if (contributionsRes.status === 'fulfilled') {
+            setPartyContributions(contributionsRes.value);
+            localStorage.setItem("phuloi_party_contributions", JSON.stringify(contributionsRes.value));
           }
-          if (configData) {
-            setWebConfig(configData);
-            localStorage.setItem("phuloi_web_config", JSON.stringify(configData));
-          }
-          if (partnersData) {
-            setOfficialPartners(partnersData);
-            localStorage.setItem("phuloi_official_partners", JSON.stringify(partnersData));
-          }
+          if (policyRes.status === 'fulfilled') setPolicyDocuments(policyRes.value);
         }
 
       } catch (err: any) {
@@ -789,8 +808,8 @@ export default function App() {
       snapshot.forEach((docSnap) => {
         liveReqs.push(docSnap.data() as CitizenRequest);
       });
-      // Sort newest first
-      liveReqs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Sort newest first using safeParseDate
+      liveReqs.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
 
       // Get guest-submitted request IDs from localStorage
       const guestSubmittedIds: string[] = [];
@@ -807,6 +826,12 @@ export default function App() {
       // Identify any request state change for current user
       const prevRequests = requestsRef.current;
       const curUser = currentUserRef.current;
+      
+      // Track notified status changes to avoid repetition
+      const notifiedStatusChangesStr = localStorage.getItem("phuloi_notified_status_ids") || "{}";
+      let notifiedStatusChanges = {};
+      try { notifiedStatusChanges = JSON.parse(notifiedStatusChangesStr); } catch (e) {}
+
       if (prevRequests && prevRequests.length > 0) {
         liveReqs.forEach((newReq) => {
           const isUserRequest = (curUser && (
@@ -817,14 +842,17 @@ export default function App() {
           if (isUserRequest) {
             const prevReq = prevRequests.find((p) => p.id === newReq.id);
             if (prevReq) {
-              // "Đang xử lý" can be SUBMITTED or VERIFYING
-              const wasProcessing = prevReq.status === RequestStatus.SUBMITTED || prevReq.status === RequestStatus.VERIFYING;
-              // "Đã giải quyết" can be APPROVED or COMPLETED
-              const isResolved = newReq.status === RequestStatus.APPROVED || newReq.status === RequestStatus.COMPLETED;
+              const statusKey = `${newReq.id}_${newReq.status}`;
+              const alreadyNotified = notifiedStatusChanges[statusKey];
 
-              if (prevReq.status !== newReq.status) {
+              if (prevReq.status !== newReq.status && !alreadyNotified) {
                 // Play notification sound
                 playNotificationSound();
+
+                // "Đang xử lý" can be SUBMITTED or VERIFYING
+                const wasProcessing = prevReq.status === RequestStatus.SUBMITTED || prevReq.status === RequestStatus.VERIFYING;
+                // "Đã giải quyết" can be APPROVED or COMPLETED
+                const isResolved = newReq.status === RequestStatus.APPROVED || newReq.status === RequestStatus.COMPLETED;
 
                 if (wasProcessing && isResolved) {
                   showToast(
@@ -841,6 +869,10 @@ export default function App() {
                     9000
                   );
                 }
+
+                // Mark as notified for this specific status
+                notifiedStatusChanges[statusKey] = true;
+                localStorage.setItem("phuloi_notified_status_ids", JSON.stringify(notifiedStatusChanges));
               }
             }
           }
@@ -864,44 +896,57 @@ export default function App() {
       snapshot.forEach((docSnap) => {
         liveNews.push(docSnap.data() as NewsArticle);
       });
-      // Sort newest first
-      liveNews.sort((a, b) => {
-        const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : new Date(a.date).getTime() || 0;
-        const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : new Date(b.date).getTime() || 0;
-        return dateB - dateA;
-      });
+      
+      // Sort newest first using safeParseDate
+      liveNews.sort((a, b) => safeParseDate(b.date || b.publishedAt) - safeParseDate(a.date || a.publishedAt));
 
       const prevNews = newsArticlesRef.current;
+      
+      // Persistence of notified news to avoid redundant toasts
+      const notifiedNewsStr = localStorage.getItem("phuloi_notified_news_ids") || "[]";
+      let notifiedNewsIds: string[] = [];
+      try { notifiedNewsIds = JSON.parse(notifiedNewsStr); } catch (e) {}
+
       if (prevNews && prevNews.length > 0) {
-        const hasNewItem = liveNews.some(newItem => 
+        const newestNotLocal = liveNews.find(newItem => 
           !prevNews.some(oldItem => oldItem.id === newItem.id)
         );
-        if (hasNewItem) {
-          const newestNotLocal = liveNews.find(newItem => 
-            !prevNews.some(oldItem => oldItem.id === newItem.id)
-          );
-          if (newestNotLocal) {
-            // Check if this new news item was created locally by the current user
-            const isJustCreatedLocally = recentNewsCreatedRef.current.has(newestNotLocal.id);
-            const curUser = currentUserRef.current;
-            const isUserAdmin = curUser?.role === "admin";
-            if (!isJustCreatedLocally && !isUserAdmin) {
-              // Play notification sound
-              playNotificationSound();
-              
-              showToast(
-                "📰 Bản tin Phú Lợi mới!",
-                `Phường Phú Lợi vừa đăng tải bản tin mới: "${newestNotLocal.title}".`,
-                "info",
-                10000
-              );
-            }
+
+        if (newestNotLocal) {
+          // Check if this new news item was created locally by the current user
+          const isJustCreatedLocally = recentNewsCreatedRef.current.has(newestNotLocal.id);
+          const curUser = currentUserRef.current;
+          const isUserAdmin = curUser?.role === "admin" || curUser?.isAdmin;
+          const alreadyNotified = notifiedNewsIds.includes(newestNotLocal.id);
+
+          /* 
+          if (!isJustCreatedLocally && !isUserAdmin && !alreadyNotified) {
+            // Play notification sound
+            playNotificationSound();
+            
+            showToast(
+              "📰 Bản tin Phú Lợi mới!",
+              `Phường Phú Lợi vừa đăng tải bản tin mới: "${newestNotLocal.title}".`,
+              "info",
+              10000
+            );
+
+            // Mark as notified for this session and future ones
+            notifiedNewsIds.push(newestNotLocal.id);
+            // Keep last 100 notified IDs to prevent localStorage bloat
+            if (notifiedNewsIds.length > 100) notifiedNewsIds.shift();
+            localStorage.setItem("phuloi_notified_news_ids", JSON.stringify(notifiedNewsIds));
           }
+          */
         }
       }
 
-      setNewsArticle(liveNews);
-      localStorage.setItem("phuloi_news_articles", JSON.stringify(liveNews));
+      if (liveNews.length === 0) {
+        setNewsArticle(DEFAULT_NEWS_ARTICLES);
+      } else {
+        setNewsArticle(liveNews);
+        localStorage.setItem("phuloi_news_articles", JSON.stringify(liveNews));
+      }
     }, (error) => {
       console.warn("Real-time news subscription error:", error);
     });
@@ -1568,7 +1613,8 @@ const handleDeleteNews = async (id: string) => {
                   { id: "forum", icon: MessageSquare, label: "Diễn đàn & Phản ánh", iconClass: "text-indigo-500" },
                   { id: "partyFeedback", icon: Vote, label: "Góp ý xây dựng Đảng", iconClass: "text-red-600" },
                   { id: "aiPersonality", icon: Sparkles, label: "Cấu hình AI", iconClass: "text-sky-500" },
-                  { id: "imageUpload", icon: ImagePlus, label: "Upload Ảnh Drive", iconClass: "text-emerald-500" }
+                  { id: "gallery", icon: ImagePlus, label: "Quản lý Thư viện Ảnh", iconClass: "text-emerald-500" },
+                  { id: "imageUpload", icon: Link2, label: "Công cụ Link Ảnh", iconClass: "text-slate-400" }
                 ].map(tab => {
                   const Icon = tab.icon;
                   const isActive = adminActiveTab === tab.id;

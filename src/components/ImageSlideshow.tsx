@@ -27,8 +27,11 @@ import { UserProfile, SlideshowImage } from "../types";
 import { 
   fetchSlideshowImagesFromFirestore, 
   saveSlideshowImageToFirestore, 
-  deleteSlideshowImageFromFirestore 
+  deleteSlideshowImageFromFirestore,
+  uploadImageToStorage
 } from "../lib/firebaseSync";
+import { convertToDirectDriveLink } from "../lib/imageUtils";
+import { Loader2 } from "lucide-react";
 
 interface ImageSlideshowProps {
   currentUser: UserProfile | null;
@@ -159,6 +162,7 @@ export default function ImageSlideshow({ currentUser }: ImageSlideshowProps) {
   const [inputTitle, setInputTitle] = useState("");
   const [inputCaption, setInputCaption] = useState("");
   const [inputDate, setInputDate] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   // Modal editing states
@@ -452,14 +456,40 @@ export default function ImageSlideshow({ currentUser }: ImageSlideshowProps) {
               <form onSubmit={handleAddImage} className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500">Đường dẫn Google Drive / Link Ảnh *</label>
-                  <input 
-                    type="text" 
-                    value={inputUrl}
-                    onChange={(e) => setInputUrl(e.target.value)}
-                    placeholder="https://drive.google.com/file/d/1YWAF01bo... hoặc link ảnh"
-                    className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:outline-none"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={inputUrl}
+                      onChange={(e) => setInputUrl(convertToDirectDriveLink(e.target.value))}
+                      placeholder="https://drive.google.com/file/d/1YWAF01bo... hoặc link ảnh"
+                      className="flex-1 text-xs px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:outline-none"
+                      required
+                    />
+                    <label className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-[10px] font-bold px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center shrink-0 border border-sky-100 shadow-3xs">
+                      {isUploadingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>Tải lên</span>}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden"
+                        disabled={isUploadingImage}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setIsUploadingImage(true);
+                            try {
+                              const downloadUrl = await uploadImageToStorage(file, "slideshow");
+                              setInputUrl(downloadUrl);
+                            } catch (error) {
+                              console.error(error);
+                              alert("Lỗi tải ảnh lên Storage");
+                            } finally {
+                              setIsUploadingImage(false);
+                            }
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                   <span className="text-[8px] text-slate-400 block font-light">Tự động nhận diện & tối ưu hóa liên kết ảnh Google Drive cực nhanh!</span>
                 </div>
 

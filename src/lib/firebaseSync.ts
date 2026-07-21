@@ -13,8 +13,10 @@ import {
   deleteDoc,
   increment
 } from "firebase/firestore";
-import { db, auth } from "./firebase";
-import { ForumPost, CitizenRequest, Campaign, Donation, JobListing, SupportCategory, RequestStatus, UserProfile, SlideshowImage, WebConfig, NewsArticle, CalendarEvent, Survey, SurveyOption, VolunteerRegistration, OfficialPartner, SystemBadge, PartyContribution } from "../types";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { db, auth, storage } from "./firebase";
+import { safeParseDate } from "./dateUtils";
+import { ForumPost, CitizenRequest, Campaign, Donation, JobListing, SupportCategory, RequestStatus, UserProfile, SlideshowImage, WebConfig, NewsArticle, CalendarEvent, Survey, SurveyOption, VolunteerRegistration, OfficialPartner, SystemBadge, PartyContribution, GalleryImage, PolicyDocument } from "../types";
 import { MTTQ_REPORT_REQUESTS, MTTQ_REPORT_DONATIONS, MTTQ_REPORT_CAMPAIGNS } from "../constants";
 
 
@@ -65,11 +67,37 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   
   if (errMsg.includes("client is offline") || errMsg.includes("Failed to get document because the client is offline")) {
     console.warn(`Firestore Offline (${operationType}): ${path}`);
+  } else if (errMsg.includes("permission-denied") || errMsg.includes("Missing or insufficient permissions")) {
+    console.warn(`Firestore Permission Denied (${operationType}): ${path}. This is expected for non-admin users on protected paths.`);
   } else {
     console.error(`Firestore Error Detailed Info: `, JSON.stringify(errInfo));
   }
   
   
+}
+
+// --- Storage Helpers ---
+export async function uploadImageToStorage(file: File, folder: string = "general"): Promise<string> {
+  try {
+    const fileName = `${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, `${folder}/${fileName}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    return downloadUrl;
+  } catch (err) {
+    console.error("Error uploading to Firebase Storage:", err);
+    throw err;
+  }
+}
+
+export async function deleteImageFromStorage(url: string): Promise<void> {
+  if (!url || !url.includes("firebasestorage.googleapis.com")) return;
+  try {
+    const storageRef = ref(storage, url);
+    await deleteObject(storageRef);
+  } catch (err) {
+    console.warn("Error deleting from Firebase Storage (it might not exist):", err);
+  }
 }
 
 // Fetch single user profile
@@ -561,19 +589,21 @@ export async function fetchWebConfig(): Promise<WebConfig> {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data() as WebConfig;
-      if (data.heroTitleLine2 === "Phú Lợi Thân Thiện" && data.heroTitleLine3 === "nghĩa tình và số hóa.") {
-        data.heroTitleLine2 = "Phú Lợi thân thiện";
-        data.heroTitleLine3 = "văn minh, kết nối số.";
-        await setDoc(docRef, data);
-      }
+      // Note: We don't auto-update here anymore to avoid permission errors for non-admins
       return data;
     } else {
-      console.log("Web config document not found in Firestore. Seeding default configuration...");
-      await setDoc(docRef, DEFAULT_WEB_CONFIG);
+      console.log("Web config document not found in Firestore.");
+      // We don't auto-seed here to avoid permission errors. 
+      // Seed should be done by an admin.
       return DEFAULT_WEB_CONFIG;
     }
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, "config/web_config");
+    // Only log real errors, not just missing docs
+    if (String(err).includes("permissions")) {
+      console.warn("Permission denied for fetchWebConfig, using defaults.");
+    } else {
+      handleFirestoreError(err, OperationType.GET, "config/web_config");
+    }
     return DEFAULT_WEB_CONFIG;
   }
 }
@@ -601,20 +631,34 @@ export async function saveWebConfig(config: WebConfig): Promise<void> {
 export async function incrementVisitCount(): Promise<{ totalVisits: number; onlineCount: number }> {
   try {
     const docRef = doc(db, "config", "visitor_stats");
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) {
-      const initialStats = { totalVisits: 14205, onlineCount: 18 };
-      await setDoc(docRef, initialStats);
-      return initialStats;
-    } else {
+    // Try to update first. If it fails, maybe the doc doesn't exist.
+    try {
       await updateDoc(docRef, {
         totalVisits: increment(1)
       });
       const updatedSnap = await getDoc(docRef);
-      return updatedSnap.data() as { totalVisits: number; onlineCount: number };
+      if (updatedSnap.exists()) {
+        return updatedSnap.data() as { totalVisits: number; onlineCount: number };
+      }
+    } catch (updateErr) {
+      // If update fails because document doesn't exist, try to set it (only if admin)
+      if (String(updateErr).includes("not-found")) {
+        const initialStats = { totalVisits: 14205, onlineCount: 18 };
+        // We only try to set if we have permission.
+        await setDoc(docRef, initialStats);
+        return initialStats;
+      }
+      throw updateErr;
     }
+    return { totalVisits: 14205, onlineCount: 18 };
   } catch (err) {
-    if (String(err).includes("offline")) { console.warn("Firestore Offline: visitor_stats update skipped."); } else { console.error("Error updating visitor stats:", err); }
+    if (String(err).includes("offline")) { 
+      console.warn("Firestore Offline: visitor_stats update skipped."); 
+    } else if (String(err).includes("permissions")) {
+      console.warn("Permission denied for visitor_stats update.");
+    } else { 
+      console.error("Error updating visitor stats:", err); 
+    }
     return { totalVisits: 14205, onlineCount: 18 };
   }
 }
@@ -624,32 +668,30 @@ export async function fetchVisitorStats(): Promise<{ totalVisits: number; online
   const isNewSession = !sessionStorage.getItem('phuloi_visited');
   if (isNewSession) {
     sessionStorage.setItem('phuloi_visited', '1');
+    return incrementVisitCount();
   }
   try {
     const docRef = doc(db, "config", "visitor_stats");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      const data = docSnap.data() as { totalVisits: number; onlineCount: number };
-      if (isNewSession) {
-        data.totalVisits += 1;
-        data.onlineCount += 1;
-        await setDoc(docRef, data);
-      }
-      return data;
+      return docSnap.data() as { totalVisits: number; onlineCount: number };
     } else {
-      const initialStats = { totalVisits: 14205, onlineCount: 18 };
-      await setDoc(docRef, initialStats);
-      return initialStats;
+      // If doc doesn't exist, incrementVisitCount will try to create it
+      return incrementVisitCount();
     }
   } catch (err) {
-    if (String(err).includes("offline")) { console.warn("Firestore Offline: visitor_stats fetch skipped."); } else { console.error("Error fetching visitor stats:", err); }
+    if (String(err).includes("offline")) { 
+      console.warn("Firestore Offline: visitor_stats fetch skipped."); 
+    } else if (String(err).includes("permissions")) {
+      console.warn("Permission denied for visitor_stats fetch.");
+    } else { 
+      console.error("Error fetching visitor stats:", err); 
+    }
     return { totalVisits: 14205, onlineCount: 18 };
   }
 }
 
 // Fetch all Facebook news items from Firestore, with automatic fallback / seeding
-
-
 export async function fetchNewsArticleFromFirestore(defaultNews: NewsArticle[]): Promise<NewsArticle[]> {
   try {
     const colRef = collection(db, "news_articles");
@@ -660,23 +702,24 @@ export async function fetchNewsArticleFromFirestore(defaultNews: NewsArticle[]):
     });
 
     if (data.length === 0 && defaultNews && defaultNews.length > 0) {
-      // Seed them to firestore so that real-time listeners get them and admins can edit/delete them
-      for (const item of defaultNews) {
-        try {
-          const docRef = doc(db, "news_articles", item.id);
-          await setDoc(docRef, item);
-        } catch (e) {
-          console.error("Error seeding default news:", e);
-        }
-      }
+      // Note: We don't auto-seed here to avoid permission errors for non-admins.
+      // Admins should seed via the Admin Panel if needed.
       return defaultNews;
     }
     
-    // sort newest first
-    data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // sort newest first using safeParseDate utility
+    data.sort((a, b) => {
+      const dateA = safeParseDate(a.date || a.publishedAt);
+      const dateB = safeParseDate(b.date || b.publishedAt);
+      return dateB - dateA;
+    });
     return data;
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, "news_articles");
+    if (String(err).includes("permissions")) {
+      console.warn("Permission denied for fetchNewsArticleFromFirestore, using defaults.");
+    } else {
+      handleFirestoreError(err, OperationType.GET, "news_articles");
+    }
     return defaultNews || [];
   }
 }
@@ -881,49 +924,19 @@ export async function fetchOfficialPartnersFromFirestore(defaultPartners: Offici
     const colRef = collection(db, "official_partners");
     const snapshot = await getDocs(colRef);
     if (snapshot.empty && defaultPartners.length > 0) {
-      // Seed default partners into Firestore if they don't exist yet
-      for (const partner of defaultPartners) {
-        await setDoc(doc(db, "official_partners", partner.id), partner);
-      }
       return defaultPartners;
     }
     const data: OfficialPartner[] = [];
-    let hasOldPartners = false;
     snapshot.forEach((docSnap) => {
-      const p = docSnap.data() as OfficialPartner;
-      if (p.id === "partner-mttq" || p.id === "partner-sabeco" || p.id === "partner-dnt" || p.id === "partner-electric") {
-        hasOldPartners = true;
-      }
-      data.push(p);
+      data.push(docSnap.data() as OfficialPartner);
     });
-
-    const defaultIds = defaultPartners.map(p => p.id);
-    const existingIds = data.map(p => p.id);
-    const hasAllDefaults = defaultIds.every(id => existingIds.includes(id));
-
-    if (hasOldPartners || !hasAllDefaults) {
-      // Delete all existing documents in official_partners
-      for (const p of data) {
-        try {
-          await deleteDoc(doc(db, "official_partners", p.id));
-        } catch (e) {
-          console.error("Failed to delete old partner:", p.id, e);
-        }
-      }
-      // Seed new default partners
-      for (const partner of defaultPartners) {
-        try {
-          await setDoc(doc(db, "official_partners", partner.id), partner);
-        } catch (e) {
-          console.error("Failed to seed new partner:", partner.id, e);
-        }
-      }
-      return defaultPartners;
-    }
-
     return data;
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, "official_partners");
+    if (String(err).includes("permissions")) {
+      console.warn("Permission denied for fetchOfficialPartnersFromFirestore, using defaults.");
+    } else {
+      handleFirestoreError(err, OperationType.GET, "official_partners");
+    }
     return defaultPartners;
   }
 }
@@ -1170,6 +1183,41 @@ export async function deleteForumPostFromFirestore(id: string): Promise<void> {
     await deleteDoc(docRef);
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, "forum_posts");
+    throw err;
+  }
+}
+
+export async function fetchGalleryImagesFromFirestore(): Promise<GalleryImage[]> {
+  try {
+    const colRef = collection(db, "community_gallery");
+    const q = query(colRef, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    const data: GalleryImage[] = [];
+    snapshot.forEach((docSnap) => {
+      data.push({ id: docSnap.id, ...docSnap.data() } as GalleryImage);
+    });
+    return data;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.GET, "community_gallery");
+    return [];
+  }
+}
+
+export async function saveGalleryImageToFirestore(image: GalleryImage): Promise<void> {
+  try {
+    const docRef = doc(db, "community_gallery", image.id);
+    await setDoc(docRef, image);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `community_gallery/${image.id}`);
+    throw err;
+  }
+}
+
+export async function deleteGalleryImageFromFirestore(id: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, "community_gallery", id));
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, `community_gallery/${id}`);
     throw err;
   }
 }

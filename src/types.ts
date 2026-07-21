@@ -268,3 +268,15 @@ export interface ForumPost {
   likedBy?: string[];
   imageUrl?: string;
 }
+
+export interface GalleryImage {
+  id: string;
+  url: string;
+  thumbnailUrl?: string;
+  title: string;
+  description?: string;
+  authorName: string;
+  authorId?: string;
+  createdAt: string;
+  quarter?: string;
+}

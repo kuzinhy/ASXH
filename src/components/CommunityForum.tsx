@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, AlertCircle, HelpCircle, CheckCircle2, User, Search, Filter, Plus, Send, X, ThumbsUp, Shield, ImagePlus, Loader2 } from "lucide-react";
 import { ForumPost, UserProfile } from "../types";
-import { fetchForumPostsFromFirestore, saveForumPostToFirestore } from "../lib/firebaseSync";
+import { fetchForumPostsFromFirestore, saveForumPostToFirestore, uploadImageToStorage } from "../lib/firebaseSync";
 import { auth } from "../lib/firebase";
 import { googleSignIn, getAccessToken } from "../lib/googleAuth";
 
@@ -56,49 +56,20 @@ export default function CommunityForum({ currentUser, onRequireAuth }: Community
     return matchesSearch && matchesTab;
   });
 
-  const FOLDER_ID = "1I_T3tDST5TBbOgWusxsmfKT0VuitlCFi";
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     setIsUploadingImage(true);
     try {
-      let token = await getAccessToken();
-      if (!token) {
-        const authResult = await googleSignIn();
-        token = authResult?.accessToken || null;
-      }
-      if (!token) throw new Error("Authentication failed");
-
-      const metadata = {
-        name: `${Date.now()}_${file.name}`,
-        parents: [FOLDER_ID]
-      };
-
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', file);
-
-      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form
-      });
-
-      const data = await response.json();
-      if (data.id) {
-        setImageUrl(`https://drive.google.com/uc?id=${data.id}`);
-        setImageFile(file);
-      } else {
-        throw new Error(data.error?.message || "Upload failed");
-      }
+      const downloadUrl = await uploadImageToStorage(file, "forum");
+      setImageUrl(downloadUrl);
+      setImageFile(file);
     } catch (error) {
       console.error("Upload error", error);
-      alert("Không thể tải lên hình ảnh. Vui lòng cấp quyền Google Drive và thử lại.");
+      alert("Không thể tải lên hình ảnh lên Storage.");
     } finally {
       setIsUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
