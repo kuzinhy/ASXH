@@ -192,6 +192,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
   const [copiedDomain, setCopiedDomain] = useState<string | null>(null);
+  const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
   const [permissionDenied, setPermissionDenied] = useState<boolean>(false);
   const [copiedRules, setCopiedRules] = useState<boolean>(false);
 
@@ -249,6 +250,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     setErrorMessage(null);
     setSuccessMessage(null);
     setUnauthorizedDomain(null);
+    setInvalidApiKey(false);
     setPermissionDenied(false);
 
     try {
@@ -349,8 +351,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
       console.error("Auth error details:", err);
       if (err.code === "permission-denied" || (err.message && err.message.includes("permission-denied"))) {
         setPermissionDenied(true);
-      }
-      if (err.code) {
+      } else if (err.code?.includes("api-key-not-valid") || err.code?.includes("invalid-api-key") || (err.message && (err.message.includes("api-key-not-valid") || err.message.includes("invalid-api-key")))) {
+        setInvalidApiKey(true);
+        setErrorMessage(translateAuthError("auth/invalid-api-key"));
+      } else if (err.code) {
         setErrorMessage(translateAuthError(err.code));
       } else {
         setErrorMessage(err.message || "Xảy ra lỗi trong quá trình xử lý.");
@@ -365,6 +369,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     setErrorMessage(null);
     setSuccessMessage(null);
     setUnauthorizedDomain(null);
+    setInvalidApiKey(false);
     setPermissionDenied(false);
     try {
       const provider = new GoogleAuthProvider();
@@ -427,6 +432,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
       } else if (err.code === "auth/unauthorized-domain" || (err.message && err.message.includes("unauthorized-domain"))) {
         setUnauthorizedDomain(window.location.hostname);
         setErrorMessage(translateAuthError("auth/unauthorized-domain"));
+      } else if (err.code?.includes("api-key-not-valid") || err.code?.includes("invalid-api-key") || (err.message && (err.message.includes("api-key-not-valid") || err.message.includes("invalid-api-key")))) {
+        setInvalidApiKey(true);
+        setErrorMessage(translateAuthError("auth/invalid-api-key"));
       } else {
         setErrorMessage(translateAuthError(err.code || err.message));
       }
@@ -625,6 +633,36 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   <li>Chọn tab <strong>Rules</strong> ở trên cùng.</li>
                   <li>Xóa toàn bộ nội dung cũ, dán luật mới vừa sao chép ở trên vào.</li>
                   <li>Nhấp nút <strong>Publish</strong> màu xanh ở góc trên bên phải để áp dụng luật. Sau đó thử đăng nhập lại!</li>
+                </ol>
+              </div>
+            </div>
+          )}
+
+          {invalidApiKey && (
+            <div className="bg-red-50/50 border border-red-200 rounded-2xl p-4 space-y-3 text-xs text-slate-600 animate-fade-in">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-red-700 uppercase tracking-wider text-[11px] mb-1 font-sans">
+                    Lỗi API Key không hợp lệ (Bị giới hạn tên miền)
+                  </h4>
+                  <p className="text-slate-600 leading-relaxed font-light">
+                    Hệ thống nhận thấy API Key Firebase của bạn bị giới hạn (Website restrictions) không cho phép tên miền hiện tại gọi API. Vui lòng cập nhật cài đặt API Key trên Google Cloud Console.
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-[11px] font-medium text-slate-700 leading-relaxed space-y-1.5 font-light bg-white/60 p-3 rounded-xl border border-red-100">
+                <p className="font-bold font-sans text-red-600">💡 Các bước sửa lỗi:</p>
+                <ol className="list-decimal pl-4 space-y-2 text-slate-600">
+                  <li>Truy cập <a href={`https://console.cloud.google.com/apis/credentials?project=${firebaseConfig.projectId}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-0.5 font-bold">Google Cloud Console <ExternalLink className="w-3 h-3 inline" /></a></li>
+                  <li>Tìm và nhấp vào API Key (thường tên là <strong>Browser key (auto created by Firebase)</strong>).</li>
+                  <li>Kéo xuống phần <strong>Application restrictions</strong> (Giới hạn ứng dụng), nếu đang chọn <strong>Websites</strong>, hãy thêm 2 tên miền sau vào danh sách:</li>
+                  <ul className="list-disc pl-4 mt-1 space-y-1 font-mono text-[10px] text-slate-500">
+                    <li><span className="bg-slate-100 p-0.5 rounded text-blue-700 select-all">{window.location.hostname}</span> (Tên miền hiện tại)</li>
+                    <li><span className="bg-slate-100 p-0.5 rounded text-blue-700 select-all">{window.location.hostname.replace("ais-dev-", "ais-pre-")}</span></li>
+                  </ul>
+                  <li>Nhấp <strong>Save</strong> (Lưu lại). Vui lòng đợi 1-2 phút để Google Cloud cập nhật, sau đó tải lại trang và thử lại.</li>
                 </ol>
               </div>
             </div>
