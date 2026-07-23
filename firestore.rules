@@ -21,101 +21,11 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isOfficer == true;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    // Validate UserProfile
-    function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'fullName', 'phone', 'address', 'quarter'])
-        && (data.keys().size() >= 6 && data.keys().size() <= 12)
-        && data.uid is string && data.uid.size() <= 128
-        && data.email is string && data.email.size() <= 300
-        && data.fullName is string && data.fullName.size() <= 200
-        && data.phone is string && data.phone.size() <= 100
-        && data.address is string && data.address.size() <= 500
-        && data.quarter is string && data.quarter.size() <= 100
-        && (!data.keys().hasAll(['isVolunteer']) || data.isVolunteer is bool)
-        && (!data.keys().hasAll(['volunteerQuarters']) || (data.volunteerQuarters is list && (data.volunteerQuarters.size() == 0 || data.volunteerQuarters[0] is string)))
-        && (!data.keys().hasAll(['isAdmin']) || data.isAdmin is bool)
-        && (!data.keys().hasAll(['isOfficer']) || data.isOfficer is bool)
-        && (!data.keys().hasAll(['officerQuarter']) || (data.officerQuarter is string && data.officerQuarter.size() <= 100));
-    }
-
-    // Validate Campaign
-    function isValidCampaign(data) {
-      return data.keys().hasAll(['id', 'title', 'description', 'targetAmount', 'currentAmount', 'category'])
-        && data.keys().size() == 6
-        && data.id is string && data.id.size() <= 128
-        && data.title is string && data.title.size() <= 200
-        && data.description is string && data.description.size() <= 2000
-        && (data.targetAmount is int || data.targetAmount is float)
-        && (data.currentAmount is int || data.currentAmount is float)
-        && data.category is string && data.category.size() <= 100;
-    }
-
-    // Validate JobListing
-    function isValidJob(data) {
-      return data.keys().hasAll(['id', 'title', 'company', 'salary', 'location', 'description', 'requirements', 'contact'])
-        && data.keys().size() == 8
-        && data.id is string && data.id.size() <= 128
-        && data.title is string && data.title.size() <= 200
-        && data.company is string && data.company.size() <= 200
-        && data.salary is string && data.salary.size() <= 100
-        && data.location is string && data.location.size() <= 500
-        && data.description is string && data.description.size() <= 2000
-        && data.requirements is list && data.requirements.size() <= 20 && (data.requirements.size() == 0 || data.requirements[0] is string)
-        && data.contact is string && data.contact.size() <= 200;
-    }
-
-    // Validate CitizenRequest
-    function isValidRequest(data) {
-      return data.keys().hasAll(['id', 'fullName', 'phone', 'address', 'quarter', 'category', 'description', 'status', 'createdAt'])
-        && data.keys().size() >= 9 && data.keys().size() <= 12
-        && data.id is string && data.id.size() <= 128
-        && data.fullName is string && data.fullName.size() <= 200
-        && data.phone is string && data.phone.size() <= 100
-        && data.address is string && data.address.size() <= 500
-        && data.quarter is string && data.quarter.size() <= 100
-        && data.category is string && data.category.size() <= 100
-        && data.description is string && data.description.size() <= 2000
-        && data.status is string && data.status.size() <= 100
-        && data.createdAt is string && data.createdAt.size() <= 100
-        && (!data.keys().hasAll(['notes']) || (data.notes is string && data.notes.size() <= 2000))
-        && (!data.keys().hasAll(['userId']) || (data.userId is string && data.userId.size() <= 128))
-        && (!data.keys().hasAll(['email']) || (data.email is string && data.email.size() <= 300));
-    }
-
-    // Validate Donation
-    function isValidDonation(data) {
-      return data.keys().hasAll(['id', 'donorName', 'amount', 'campaignTitle', 'message', 'createdAt'])
-        && (data.keys().size() == 6 || data.keys().size() == 7)
-        && data.id is string && data.id.size() <= 128
-        && data.donorName is string && data.donorName.size() <= 200
-        && (data.amount is int || data.amount is float) && data.amount > 0
-        && data.campaignTitle is string && data.campaignTitle.size() <= 200
-        && data.message is string && data.message.size() <= 2000
-        && data.createdAt is string && data.createdAt.size() <= 100
-        && (!data.keys().hasAll(['userId']) || (data.userId is string && data.userId.size() <= 128));
-    }
-
     // Match users
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isOfficer());
-      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data)
-        && (!request.resource.data.keys().hasAll(['isAdmin']) || request.resource.data.isAdmin == false)
-        && (!request.resource.data.keys().hasAll(['isOfficer']) || request.resource.data.isOfficer == false);
-      allow update: if (isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data)
-        && (
-          !request.resource.data.keys().hasAll(['isAdmin']) || 
-          (resource.data.keys().hasAll(['isAdmin']) && request.resource.data.isAdmin == resource.data.isAdmin) ||
-          (!resource.data.keys().hasAll(['isAdmin']) && request.resource.data.isAdmin == false)
-        )
-        && (
-          !request.resource.data.keys().hasAll(['isOfficer']) || 
-          (resource.data.keys().hasAll(['isOfficer']) && request.resource.data.isOfficer == resource.data.isOfficer) ||
-          (!resource.data.keys().hasAll(['isOfficer']) && request.resource.data.isOfficer == false)
-        )) || isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
       allow list: if isAdmin() || isOfficer();
       allow delete: if isAdmin();
     }
@@ -123,33 +33,33 @@ service cloud.firestore {
     // Match campaigns
     match /campaigns/{campaignId} {
       allow read: if true;
-      allow create: if isValidCampaign(request.resource.data);
-      allow update: if isValidCampaign(request.resource.data);
-      allow delete: if false;
+      allow create: if isAdmin() || isOfficer();
+      allow update: if isAdmin() || isOfficer();
+      allow delete: if isAdmin();
     }
 
     // Match jobs
     match /jobs/{jobId} {
       allow read: if true;
-      allow create: if isValidJob(request.resource.data);
-      allow update: if isValidJob(request.resource.data);
-      allow delete: if false;
+      allow create: if isAdmin() || isOfficer();
+      allow update: if isAdmin() || isOfficer();
+      allow delete: if isAdmin();
     }
 
     // Match requests
     match /requests/{requestId} {
       allow read: if true;
-      allow create: if isValidRequest(request.resource.data);
-      allow update: if isValidRequest(request.resource.data);
-      allow delete: if false;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isAdmin();
     }
 
     // Match donations
     match /donations/{donationId} {
       allow read: if true;
-      allow create: if isValidDonation(request.resource.data);
-      allow update: if isValidDonation(request.resource.data);
-      allow delete: if false;
+      allow create: if true;
+      allow update: if isAdmin() || isOfficer();
+      allow delete: if isAdmin();
     }
 
     // Match facebook news
@@ -232,11 +142,7 @@ service cloud.firestore {
     // Match config
     match /config/{configId} {
       allow read: if true;
-      allow create: if configId == "visitor_stats" 
-        && request.resource.data.totalVisits is int 
-        && request.resource.data.onlineCount is int;
-      allow update: if configId == "visitor_stats"; // Allow visitors to increment the counter
-      allow write: if isAdmin();
+      allow write: if true;
     }
   }
 }

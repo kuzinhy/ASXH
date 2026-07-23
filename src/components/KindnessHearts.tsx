@@ -21,6 +21,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { NewsArticle } from "../types";
+import { fetchLoveCount, incrementLoveCount } from "../lib/firebaseSync";
 
 interface HeartParticle {
   id: number;
@@ -63,6 +64,12 @@ const EMOJIS = ["❤️", "💖", "💝", "🌸", "✨", "🙏", "🌻"];
 
 export default function KindnessHearts({ news = [] }: KindnessHeartsProps) {
   const [loveCount, setLoveCount] = useState(12480);
+
+  useEffect(() => {
+    fetchLoveCount().then(count => {
+      setLoveCount(count);
+    });
+  }, []);
   const [particles, setParticles] = useState<HeartParticle[]>([]);
   const [activeQuote, setActiveQuote] = useState("");
   const [showQuoteTip, setShowQuoteTip] = useState(false);
@@ -80,17 +87,7 @@ export default function KindnessHearts({ news = [] }: KindnessHeartsProps) {
   const [customMessage, setCustomMessage] = useState("Tôi vừa đồng hành cùng Cổng An sinh xã hội số phường Phú Lợi! Hãy cùng chung tay lan tỏa yêu thương.");
   const [copied, setCopied] = useState(false);
 
-  // Load counter from localStorage if available
-  useEffect(() => {
-    const saved = localStorage.getItem("phuloi_social_love_count");
-    if (saved) {
-      setLoveCount(parseInt(saved, 10));
-    } else {
-      const seed = Math.floor(Math.random() * 1000) + 12480;
-      setLoveCount(seed);
-      localStorage.setItem("phuloi_social_love_count", seed.toString());
-    }
-  }, []);
+  
 
   // Filter published news
   const publishedNews = news.filter(item => !item.status || item.status === "published");
@@ -127,10 +124,16 @@ export default function KindnessHearts({ news = [] }: KindnessHeartsProps) {
     }
   }, [news]);
 
-  const triggerLove = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const triggerLove = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Optimistic update
     const newCount = loveCount + 1;
     setLoveCount(newCount);
-    localStorage.setItem("phuloi_social_love_count", newCount.toString());
+    
+    // Increment in backend
+    const actualCount = await incrementLoveCount();
+    if (actualCount > 0) {
+      setLoveCount(actualCount);
+    }
 
     // Generate random quote
     const randomQuote = SHARING_QUOTES[Math.floor(Math.random() * SHARING_QUOTES.length)];

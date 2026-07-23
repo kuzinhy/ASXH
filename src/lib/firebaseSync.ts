@@ -171,7 +171,28 @@ const SEED_JOBS: JobListing[] = [
 
 // Helper to seed Firestore if empty
 export async function seedDatabaseIfEmpty() {
-  return;
+  try {
+    const q = query(collection(db, "campaigns"), limit(1));
+    const campsSnap = await getDocs(q);
+    if (campsSnap.empty) {
+      console.log("Database is empty, seeding default data...");
+      for (const camp of SEED_CAMPAIGNS) {
+        await setDoc(doc(db, "campaigns", camp.id), camp);
+      }
+      for (const req of SEED_REQUESTS) {
+        await setDoc(doc(db, "requests", req.id), req);
+      }
+      for (const don of SEED_DONATIONS) {
+        await setDoc(doc(db, "donations", don.id), don);
+      }
+      for (const job of SEED_JOBS) {
+        await setDoc(doc(db, "jobs", job.id), job);
+      }
+      console.log("Database seeded successfully.");
+    }
+  } catch (err) {
+    console.error("Error seeding database:", err);
+  }
 }
 
 // Fetch all campaigns
@@ -626,6 +647,38 @@ export async function saveWebConfig(config: WebConfig): Promise<void> {
   }
 }
 
+
+
+// Fetch Love Count
+export async function fetchLoveCount(): Promise<number> {
+  try {
+    const docRef = doc(db, "config", "social_stats");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return (docSnap.data() as any).loveCount || 12480;
+    }
+  } catch (err) {
+    console.error("Error fetching love count:", err);
+  }
+  return 12480;
+}
+
+// Increment Love Count
+export async function incrementLoveCount(): Promise<number> {
+  try {
+    const docRef = doc(db, "config", "social_stats");
+    await setDoc(docRef, { loveCount: increment(1) }, { merge: true });
+    
+    // Fetch the new value
+    const updatedSnap = await getDoc(docRef);
+    if (updatedSnap.exists()) {
+      return (updatedSnap.data() as any).loveCount || 12480;
+    }
+  } catch (err) {
+    console.error("Error updating love count:", err);
+  }
+  return 12480;
+}
 
 // Increment visitor stats
 export async function incrementVisitCount(): Promise<{ totalVisits: number; onlineCount: number }> {
