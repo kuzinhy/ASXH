@@ -8,6 +8,7 @@ import firebaseAppletConfig from "../../firebase-applet-config.json";
 export const firebaseConfig = {
   apiKey: firebaseAppletConfig.apiKey,
   authDomain: firebaseAppletConfig.authDomain,
+  databaseURL: (firebaseAppletConfig as any).databaseURL,
   projectId: firebaseAppletConfig.projectId,
   storageBucket: firebaseAppletConfig.storageBucket,
   messagingSenderId: firebaseAppletConfig.messagingSenderId,
