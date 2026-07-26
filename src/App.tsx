@@ -732,7 +732,7 @@ export default function App() {
         setError(null);
 
         // 1. Automatically seed database if campaigns are empty
-        await seedDatabaseIfEmpty();
+        await seedDatabaseIfEmpty(DEFAULT_NEWS_ARTICLES, DEFAULT_EVENTS, DEFAULT_OFFICIAL_PARTNERS, []);
 
         // 2. Fetch all collections in parallel (background refresh) using allSettled for robustness
         const results = await Promise.allSettled([
@@ -973,22 +973,11 @@ export default function App() {
       console.warn("Could not listen to visitor stats:", err);
     });
 
-    // Simulate real-time active users fluctuation
-    const interval = setInterval(() => {
-      setVisitorStats(prev => {
-        const fluctuation = Math.floor(Math.random() * 6) - 2;
-        let newOnline = currentOnlineBase + fluctuation;
-        if (newOnline < 3) newOnline = 3;
-        return {
-          ...prev,
-          onlineCount: newOnline
-        };
-      });
-    }, 8000);
+    
 
     return () => {
       unsub();
-      clearInterval(interval);
+      
     };
   }, []);
 
@@ -1357,6 +1346,18 @@ export default function App() {
         id: newId,
         publishedAt: new Date().toISOString()
       };
+      
+      const currentNews = newsArticlesRef.current || [];
+      const defaultIds = ["news-1", "news-2", "news-3", "news-4"];
+      
+      // Automatically save existing defaults to Firestore if they are currently visible
+      // This prevents them from disappearing when the first custom news is added.
+      for (const item of currentNews) {
+        if (defaultIds.includes(item.id)) {
+          await saveNewsArticleToFirestore(item).catch(() => {});
+        }
+      }
+
       await saveNewsArticleToFirestore(fullNews);
       showToast("Tạo tin tức thành công", "Đã thêm bản tin mới vào hệ thống.", "success");
     } catch (err) {
@@ -1689,6 +1690,15 @@ const handleDeleteNews = async (id: string) => {
                 onRestoreDefaultNews={handleRestoreDefaultNews}
                 officialPartners={officialPartners}
                 onSavePartner={async (partner) => {
+                  // Seed missing defaults if they are in the current local state
+                  const currentPartners = officialPartners;
+                  const defaultPartnerIds = ["partner-1", "partner-2", "partner-3", "partner-4", "partner-5", "partner-6", "partner-7", "partner-8", "partner-9"];
+                  for (const p of currentPartners) {
+                    if (defaultPartnerIds.includes(p.id)) {
+                      await saveOfficialPartnerToFirestore(p).catch(() => {});
+                    }
+                  }
+
                   // Update local state immediately
                   setOfficialPartners(prev => {
                     const idx = prev.findIndex(p => p.id === partner.id);

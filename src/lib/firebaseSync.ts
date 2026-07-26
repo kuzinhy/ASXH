@@ -170,7 +170,7 @@ const SEED_JOBS: JobListing[] = [
 
 
 // Helper to seed Firestore if empty
-export async function seedDatabaseIfEmpty() {
+export async function seedDatabaseIfEmpty(defaultNews: any[] = [], defaultEvents: any[] = [], defaultPartners: any[] = [], defaultPolicyDocs: any[] = []) {
   try {
     const q = query(collection(db, "campaigns"), limit(1));
     const campsSnap = await getDocs(q);
@@ -187,6 +187,28 @@ export async function seedDatabaseIfEmpty() {
       }
       for (const job of SEED_JOBS) {
         await setDoc(doc(db, "jobs", job.id), job);
+      }
+      
+      // Also seed other defaults
+      if (defaultNews.length > 0) {
+        for (const news of defaultNews) {
+          await setDoc(doc(db, "news_articles", news.id), news);
+        }
+      }
+      if (defaultEvents.length > 0) {
+        for (const evt of defaultEvents) {
+          await setDoc(doc(db, "events", evt.id), evt);
+        }
+      }
+      if (defaultPartners.length > 0) {
+        for (const partner of defaultPartners) {
+          await setDoc(doc(db, "official_partners", partner.id), partner);
+        }
+      }
+      if (defaultPolicyDocs.length > 0) {
+        for (const docItem of defaultPolicyDocs) {
+          await setDoc(doc(db, "policyDocuments", docItem.id), docItem);
+        }
       }
       console.log("Database seeded successfully.");
     }

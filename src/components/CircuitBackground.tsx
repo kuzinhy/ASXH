@@ -66,7 +66,7 @@ export default function CircuitBackground() {
 
     const initParticles = () => {
       particles = [];
-      const numParticles = Math.floor((canvas.width * canvas.height) / 12000);
+      const numParticles = Math.floor((canvas.width * canvas.height) / 30000);
       for (let i = 0; i < numParticles; i++) {
         particles.push(new Particle());
       }

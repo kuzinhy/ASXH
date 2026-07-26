@@ -5130,6 +5130,14 @@ export default function AdminPanel({
                                 textColor: "text-blue-700",
                                 bgColor: "bg-slate-50", iconName: "Calendar"
                               };
+                              // Seed defaults if they exist
+                              const defaultEventIds = ["evt-1", "evt-2"];
+                              for (const evt of events) {
+                                if (defaultEventIds.includes(evt.id)) {
+                                  await saveEventToFirestore(evt).catch(() => {});
+                                }
+                              }
+                              
                               if (setEvents) setEvents([...events, newEvt]);
                               await saveEventToFirestore(newEvt);
                             }}
