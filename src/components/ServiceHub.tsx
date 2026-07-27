@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Heart, ShieldAlert, ShieldCheck, Search, Award, Building, Briefcase, 
@@ -492,16 +492,13 @@ export default function ServiceHub({
   // Tab 4: Charity Trend Chart State
   const [trendMetric, setTrendMetric] = useState<"cumulative" | "individual">("cumulative");
 
-  const getDonationTrendData = () => {
-    if (!donations || donations.length === 0) return [];
+  
+  const { trendData, totalDonationsAmount, distinctDonorsCount, maxDonationAmount, avgDonationAmount } = useMemo(() => {
+    if (!donations || donations.length === 0) return { trendData: [], totalDonationsAmount: 0, distinctDonorsCount: 0, maxDonationAmount: 0, avgDonationAmount: 0 };
     
-    // Sort donations by date chronologically
-    const sorted = [...donations].sort((a, b) => {
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-
+    const sorted = [...donations].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     let cumulativeSum = 0;
-    return sorted.map(d => {
+    const trendData = sorted.map(d => {
       cumulativeSum += d.amount;
       const dateObj = new Date(d.createdAt);
       return {
@@ -512,14 +509,15 @@ export default function ServiceHub({
         "Chiến dịch": d.campaignTitle,
       };
     });
-  };
+    
+    const totalDonationsAmount = donations.reduce((sum, d) => sum + d.amount, 0);
+    const distinctDonorsCount = new Set(donations.map(d => d.donorName)).size;
+    const maxDonationAmount = Math.max(...donations.map(d => d.amount));
+    const avgDonationAmount = Math.round(totalDonationsAmount / donations.length);
+    
+    return { trendData, totalDonationsAmount, distinctDonorsCount, maxDonationAmount, avgDonationAmount };
+  }, [donations]);
 
-  const trendData = getDonationTrendData();
-
-  const totalDonationsAmount = donations.reduce((sum, d) => sum + d.amount, 0);
-  const distinctDonorsCount = new Set(donations.map(d => d.donorName)).size;
-  const maxDonationAmount = donations.length > 0 ? Math.max(...donations.map(d => d.amount)) : 0;
-  const avgDonationAmount = donations.length > 0 ? Math.round(totalDonationsAmount / donations.length) : 0;
 
   // Tab 5: Citizen Dashboard State
   const [citizenSubTab, setCitizenSubTab] = useState<"requests" | "donations" | "feedback" | "volunteer" | "badges">("requests");

@@ -111,8 +111,8 @@ export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
   return (
     <section className="relative overflow-hidden py-10 md:py-20 px-4 bg-transparent" id="portal-hero">
       {/* Background soft cinematic glowing light orbs */}
-      <div className="absolute top-1/4 left-1/10 w-[500px] h-[500px] rounded-full bg-primary-100/40 blur-[130px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-1/10 right-1/10 w-[600px] h-[600px] rounded-full bg-blue-100/30 blur-[160px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/10 w-[500px] h-[500px] rounded-full bg-primary-100/40 pointer-events-none " />
+      <div className="absolute bottom-1/10 right-1/10 w-[600px] h-[600px] rounded-full bg-blue-100/30 pointer-events-none" />
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center relative z-10">
         
@@ -122,9 +122,9 @@ export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="inline-flex items-center space-x-2 bg-primary-50/85 text-primary-800 border border-primary-100/50 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur-md"
+            className="inline-flex items-center space-x-2 bg-primary-50/85 text-primary-800 border border-primary-100/50 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"
           >
-            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-primary-500  shrink-0" />
             <span className="font-sans whitespace-nowrap">{config.heroSubtitle || DEFAULT_WEB_CONFIG.heroSubtitle}</span>
           </motion.div>
 
@@ -185,7 +185,7 @@ export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15 }}
-            className="bg-white/90 backdrop-blur-2xl border border-primary-100 p-6 sm:p-8 rounded-[32px] shadow-[0_30px_70px_-15px_rgba(37,99,235,0.15)] space-y-7 relative overflow-hidden"
+            className="bg-white/95  border border-primary-100 p-6 sm:p-8 rounded-[32px] shadow-[0_30px_70px_-15px_rgba(37,99,235,0.15)] space-y-7 relative overflow-hidden"
           >
             {/* Ambient decorative grid or circle lines */}
             <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-primary-50 blur-3xl pointer-events-none" />
@@ -204,7 +204,7 @@ export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
 
               {/* Verified badge */}
               <div className="flex items-center space-x-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl text-[9px] text-emerald-700 font-black uppercase tracking-widest font-sans shadow-sm">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 animate-pulse" />
+                <ShieldCheck className="w-4 h-4 text-emerald-600 " />
                 <span>Đã Chứng Thực</span>
               </div>
             </div>
@@ -227,7 +227,7 @@ export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
                     <div className="space-y-2 flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className={`px-2.5 py-1 rounded-lg border-2 uppercase tracking-[0.1em] flex items-center space-x-2 ${liveActivities[tickerIndex].color}`}>
-                          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0" />
+                          <span className="w-2 h-2 bg-emerald-500 rounded-full  shrink-0" />
                           <span>{liveActivities[tickerIndex].org}</span>
                         </span>
                         <span className="text-[10px] text-slate-400 font-mono font-bold whitespace-nowrap shrink-0 flex items-center space-x-1">
@@ -274,7 +274,7 @@ export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
             {/* Decorative Connection Line */}
             <div className="border-t border-primary-50 pt-5 flex justify-between items-center text-[10px] text-slate-500 font-bold uppercase tracking-widest">
               <span className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-primary-500 animate-spin-slow" />
+                <Sparkles className="w-4 h-4 text-primary-500" />
                 <span className="font-mono text-[9px]">Trục dữ liệu liên thông 06</span>
               </span>
               <div className="flex items-center space-x-1.5">

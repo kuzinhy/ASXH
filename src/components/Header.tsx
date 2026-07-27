@@ -20,6 +20,27 @@ interface HeaderProps {
   onlineCount?: number;
 }
 
+
+const LiveClock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const formatDate = (date: Date) => date.toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "numeric", day: "numeric" });
+  
+  return (
+    <div className="flex flex-col items-center sm:flex-row sm:space-x-2">
+      <span className="font-mono">{formatTime(time)}</span>
+      <span className="hidden sm:inline">|</span>
+      <span className="text-[9px] uppercase tracking-wider">{formatDate(time)}</span>
+    </div>
+  );
+};
+
 export default function Header({ 
   currentUser, 
   onAuthClick, 
@@ -30,25 +51,10 @@ export default function Header({
   totalVisits,
   onlineCount
 }: HeaderProps) {
-  const [time, setTime] = useState(new Date());
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [mobileAdminOpen, setMobileAdminOpen] = useState(false);
-
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-  };
-
   const isAdmin = currentUser?.isAdmin || currentUser?.email?.toLowerCase() === "nguyenhuy.thudaumot@gmail.com";
   const isOfficer = currentUser?.isOfficer;
   const isVolunteer = currentUser?.isVolunteer;
@@ -76,20 +82,18 @@ export default function Header({
 
   return (
     <>
-    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl text-slate-900 border-b border-blue-100/50 shadow-[0_2px_15px_-3px_rgba(37,99,235,0.07)]" id="portal-header">
+    <header className="sticky top-0 z-50 w-full bg-white/95 text-slate-900 border-b border-blue-100/50 shadow-[0_2px_15px_-3px_rgba(37,99,235,0.07)]" id="portal-header">
       {/* Top Bar with Time and Secure Status */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-blue-900 px-4 py-2.5 text-[10px] sm:text-[11px] text-blue-100 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-0 border-b border-blue-500/20 relative overflow-hidden">
         {/* Modern high-tech blue/cyan color bleed circles */}
-        <div className="absolute top-0 left-10 w-40 h-40 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 right-20 w-32 h-32 bg-blue-500/25 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute top-0 left-10 w-40 h-40 bg-cyan-400/20 rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 right-20 w-32 h-32 bg-blue-500/25 rounded-full pointer-events-none" />
         {/* Decorative thin light glow line at the bottom of top bar */}
         <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
 
         <div className="flex items-center space-x-2 relative z-10">
-          <Clock className="w-3.5 h-3.5 text-primary-400 animate-pulse" />
-          <span className="font-mono text-blue-100 font-bold tracking-wide">{formatTime(time)}</span>
-          <span className="text-blue-800/60">|</span>
-          <span className="hidden sm:inline text-blue-300/80 font-medium">{formatDate(time)}</span>
+          <Clock className="w-3.5 h-3.5 text-primary-400" />
+          <LiveClock />
         </div>
         
         {/* Visitors and Online count placed compactly here */}
@@ -104,7 +108,7 @@ export default function Header({
           
           {onlineCount !== undefined && (
             <div className="flex items-center space-x-1.5 text-emerald-400 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               <span>Trực tuyến:</span>
               <span className="font-bold font-mono text-emerald-300 bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/30">{onlineCount.toLocaleString("vi-VN")}</span>
             </div>
@@ -113,12 +117,12 @@ export default function Header({
           <span className="text-blue-900 hidden md:inline">|</span>
  
           <div className="flex items-center space-x-1.5 text-emerald-400 font-semibold">
-            <Activity className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+            <Activity className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-[9px] tracking-widest uppercase font-black">Cổng Live</span>
           </div>
           <span className="text-blue-900 hidden lg:inline">|</span>
           <div className="flex items-center space-x-1.5 text-primary-300 font-black bg-primary-950/60 px-2.5 py-1 rounded-lg border border-primary-800/30 shadow-sm">
-            <ShieldCheck className="w-3.5 h-3.5 text-primary-400 animate-pulse" />
+            <ShieldCheck className="w-3.5 h-3.5 text-primary-400" />
             <span className="text-[9px] uppercase tracking-widest font-sans">Mạng An Sinh Số</span>
           </div>
         </div>
@@ -206,7 +210,7 @@ export default function Header({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="absolute right-0 mt-2.5 w-72 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-[24px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-5 z-50 text-left space-y-4"
+                      className="absolute right-0 mt-2.5 w-72 bg-white border-slate-200 border border-slate-200/80 rounded-[24px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-5 z-50 text-left space-y-4"
                     >
                       {/* User Header Info */}
                       <div className="flex items-center space-x-4 border-b border-slate-100 pb-4">
@@ -333,7 +337,7 @@ export default function Header({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-slate-200 px-4 py-5 space-y-3 shadow-2xl text-slate-800 max-h-[85vh] overflow-y-auto"
+          className="lg:hidden bg-white/98 border-t border-slate-200 px-4 py-5 space-y-3 shadow-2xl text-slate-800 max-h-[85vh] overflow-y-auto"
         >
           
 
