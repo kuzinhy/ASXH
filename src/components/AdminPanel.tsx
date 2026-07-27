@@ -1482,43 +1482,49 @@ export default function AdminPanel({
   };
 
   // Filter requests using Smart Search Rank
-  let baseFilteredRequests = requestsList.filter(req => {
-    const matchStatus = reqStatusFilter === "ALL" || req.status === reqStatusFilter;
-    const matchQuarter = reqQuarterFilter === "ALL" || req.quarter === reqQuarterFilter;
-    return matchStatus && matchQuarter;
-  });
+  const filteredRequests = useMemo(() => {
+    let base = requestsList.filter(req => {
+      const matchStatus = reqStatusFilter === "ALL" || req.status === reqStatusFilter;
+      const matchQuarter = reqQuarterFilter === "ALL" || req.quarter === reqQuarterFilter;
+      return matchStatus && matchQuarter;
+    });
 
-  if (reqSearchQuery) {
-    baseFilteredRequests = searchRank(baseFilteredRequests, reqSearchQuery, ["fullName", "phone", "id", "category", "reason", "content"]);
-  }
+    if (reqSearchQuery) {
+      base = searchRank(base, reqSearchQuery, ["fullName", "phone", "id", "category", "reason", "content"]);
+    }
 
-  const filteredRequests = smartSortRequests<CitizenRequest>(baseFilteredRequests, {
-    [RequestStatus.SUBMITTED]: 1,
-    [RequestStatus.VERIFYING]: 2,
-    [RequestStatus.APPROVED]: 3,
-    [RequestStatus.COMPLETED]: 4
-  });
+    return smartSortRequests<CitizenRequest>(base, {
+      [RequestStatus.SUBMITTED]: 1,
+      [RequestStatus.VERIFYING]: 2,
+      [RequestStatus.APPROVED]: 3,
+      [RequestStatus.COMPLETED]: 4
+    });
+  }, [requestsList, reqStatusFilter, reqQuarterFilter, reqSearchQuery]);
 
   // Filter users
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = useMemo(() => {
     const query = userSearchQuery.toLowerCase();
-    return (
-      user.fullName.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      (user.phone && user.phone.includes(query)) ||
-      (user.quarter && getQuarterName(user.quarter).toLowerCase().includes(query))
-    );
-  });
+    return users.filter(user => {
+      return (
+        user.fullName.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        (user.phone && user.phone.includes(query)) ||
+        (user.quarter && getQuarterName(user.quarter).toLowerCase().includes(query))
+      );
+    });
+  }, [users, userSearchQuery]);
 
   // Filter logs
-  const filteredLogs = activityLogs.filter(log => {
-    const matchCategory = logCategoryFilter === "ALL" || log.category === logCategoryFilter;
-    const matchSearch = !logSearchQuery || 
-      log.action.toLowerCase().includes(logSearchQuery.toLowerCase()) ||
-      log.details.toLowerCase().includes(logSearchQuery.toLowerCase()) ||
-      log.admin.toLowerCase().includes(logSearchQuery.toLowerCase());
-    return matchCategory && matchSearch;
-  });
+  const filteredLogs = useMemo(() => {
+    return activityLogs.filter(log => {
+      const matchCategory = logCategoryFilter === "ALL" || log.category === logCategoryFilter;
+      const matchSearch = !logSearchQuery || 
+        log.action.toLowerCase().includes(logSearchQuery.toLowerCase()) ||
+        log.details.toLowerCase().includes(logSearchQuery.toLowerCase()) ||
+        log.admin.toLowerCase().includes(logSearchQuery.toLowerCase());
+      return matchCategory && matchSearch;
+    });
+  }, [activityLogs, logCategoryFilter, logSearchQuery]);
 
   // Requests by Category memo for Charts
   const requestsByCategoryData = useMemo(() => {

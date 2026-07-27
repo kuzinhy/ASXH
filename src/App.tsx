@@ -455,11 +455,14 @@ export default function App() {
   // Load offline fallback data from local storage or seeds
   const loadFallbackData = () => {
     try {
+      // Proactively clear obsolete/heavy cached keys to optimize browser storage
+      localStorage.removeItem("phuloi_news_articles");
+
       const cachedReqs = localStorage.getItem("phuloi_requests");
       const cachedCamps = localStorage.getItem("phuloi_campaigns");
       const cachedDons = localStorage.getItem("phuloi_donations");
       const cachedJobs = localStorage.getItem("phuloi_jobs");
-      const cachedNews = localStorage.getItem("phuloi_news_articles");
+      // const cachedNews = localStorage.getItem("phuloi_news_articles");
       const cachedEvents = localStorage.getItem("phuloi_events");
       const cachedConfig = localStorage.getItem("phuloi_web_config");
 
@@ -487,11 +490,7 @@ export default function App() {
         localStorage.setItem("phuloi_jobs", JSON.stringify(SEED_JOBS));
       }
 
-      if (cachedNews) setNewsArticle(JSON.parse(cachedNews));
-      else {
-        setNewsArticle(DEFAULT_NEWS_ARTICLES);
-        localStorage.setItem("phuloi_news_articles", JSON.stringify(DEFAULT_NEWS_ARTICLES));
-      }
+      setNewsArticle(DEFAULT_NEWS_ARTICLES);
 
       if (cachedEvents) setEvents(JSON.parse(cachedEvents));
       else {
@@ -767,7 +766,6 @@ export default function App() {
           if (newsRes.status === 'fulfilled') {
             const sortedNews = newsRes.value.sort((a, b) => safeParseDate(b.date) - safeParseDate(a.date));
             setNewsArticle(sortedNews);
-            localStorage.setItem("phuloi_news_articles", JSON.stringify(sortedNews));
           }
           if (visitsRes.status === 'fulfilled') setVisitorStats(visitsRes.value);
           if (partnersRes.status === 'fulfilled') {
@@ -943,7 +941,6 @@ export default function App() {
         setNewsArticle(DEFAULT_NEWS_ARTICLES);
       } else {
         setNewsArticle(liveNews);
-        localStorage.setItem("phuloi_news_articles", JSON.stringify(liveNews));
       }
     }, (error) => {
       console.warn("Real-time news subscription error:", error);

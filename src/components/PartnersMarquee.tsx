@@ -212,7 +212,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
                   return (
                     <div 
                       key={`${partner.id}-${idx}`}
-                      className={`p-5 sm:p-6 rounded-3xl border border-slate-200/40 bg-white/70 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[190px] relative group overflow-hidden`}
+                      className={`p-5 sm:p-6 rounded-3xl border border-slate-200/40 bg-white shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[190px] relative group overflow-hidden`}
                     >
                       {/* Accent glow on hover */}
                       <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -265,7 +265,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
                   return (
                     <div 
                       key={`${partner.id}-${idx}`}
-                      className={`p-5 sm:p-6 rounded-3xl border border-slate-200/40 bg-white/70 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[190px] relative group overflow-hidden`}
+                      className={`p-5 sm:p-6 rounded-3xl border border-slate-200/40 bg-white shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[190px] relative group overflow-hidden`}
                     >
                       {/* Accent glow on hover */}
                       <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -371,7 +371,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
                 return [...baseList, ...baseList].map((partner, idx) => (
                   <div 
                     key={`${partner.id}-${idx}`} 
-                    className="bg-white/80 backdrop-blur-md border border-slate-200/50 hover:border-sky-500/30 rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:shadow-md w-[265px] shrink-0"
+                    className="bg-white border border-slate-200/50 hover:border-sky-500/30 rounded-2xl p-4 flex items-center gap-4 transition-all duration-300 hover:shadow-md w-[265px] shrink-0"
                   >
                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center p-1 border border-slate-100 shadow-inner overflow-hidden shrink-0">
                       <img 

@@ -66,7 +66,7 @@ export default function CircuitBackground() {
 
     const initParticles = () => {
       particles = [];
-      const numParticles = Math.floor((canvas.width * canvas.height) / 30000);
+      const numParticles = Math.min(30, Math.floor((canvas.width * canvas.height) / 45000));
       for (let i = 0; i < numParticles; i++) {
         particles.push(new Particle());
       }
@@ -74,7 +74,7 @@ export default function CircuitBackground() {
 
     const initSymbols = () => {
       digitalSymbols = [];
-      const numSymbols = Math.max(6, Math.floor((canvas.width * canvas.height) / 150000));
+      const numSymbols = Math.min(5, Math.max(3, Math.floor((canvas.width * canvas.height) / 220000)));
       const types: Array<"wifi" | "chip" | "cloud" | "nodes" | "community"> = [
         "wifi",
         "chip",

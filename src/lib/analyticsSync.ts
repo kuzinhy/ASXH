@@ -162,6 +162,9 @@ function detectBrowser(ua: string): string {
   return "Brave/Khác";
 }
 
+// Module-level cache for client's IP address to prevent redundant external API calls
+let cachedClientIP: string | null = null;
+
 // Log a brand new actual visit
 export async function logCurrentVisit(
   user: UserProfile | null,
@@ -186,16 +189,20 @@ export async function logCurrentVisit(
   }
 
   // Attempt to get client IP via a free, fast JSON API with immediate local fallback
-  let ip = "14.161.45.10"; // Default representative local IP
-  try {
-    const res = await fetch("https://api.ipify.org?format=json", { signal: AbortSignal.timeout(1800) });
-    const data = await res.json();
-    if (data && data.ip) {
-      ip = data.ip;
+  let ip = cachedClientIP || "14.161.45.10"; // Use cache or default representative local IP
+  
+  if (!cachedClientIP) {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json", { signal: AbortSignal.timeout(1800) });
+      const data = await res.json();
+      if (data && data.ip) {
+        ip = data.ip;
+        cachedClientIP = ip; // Store in module-level cache
+      }
+    } catch (e) {
+      // Fail silently, use organic-looking IP and don't cache to allow retry next time
+      ip = getRandomIP();
     }
-  } catch (e) {
-    // Fail silently, use organic-looking IP
-    ip = getRandomIP();
   }
 
   let userType: AccessLog["userType"] = "Khách vãng lai";
