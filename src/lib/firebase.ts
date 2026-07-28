@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, doc, getDocFromServer } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getMessaging, isSupported } from "firebase/messaging";
 import firebaseAppletConfig from "../../firebase-applet-config.json";
@@ -37,5 +37,16 @@ if (typeof window !== "undefined") {
   }).catch((err) => {
     console.warn("FCM initialization skipped:", err);
   });
+
+  async function testConnection() {
+    try {
+      await getDocFromServer(doc(db, "config", "connection_test"));
+    } catch (error) {
+      if (error instanceof Error && (error.message.includes("offline") || error.message.includes("Could not reach Cloud Firestore backend"))) {
+        console.warn("Firestore backend connection test: running in offline mode.");
+      }
+    }
+  }
+  testConnection();
 }
 

@@ -14,6 +14,7 @@ import { UserProfile, WebConfig, Campaign, JobListing, CitizenRequest, SupportCa
 import AdminForumPanel from "./AdminForumPanel";
 import ProfileModal from "./ProfileModal";
 import PushNotificationCenter from "./PushNotificationCenter";
+import { RequestStatusBadge } from "./ServiceHub";
 import ConfirmDialog from "./ConfirmDialog";
 import { QUARTERS_LIST } from "../constants";
 import { fetchAllUserProfiles, updateUserProfileInFirestore, fetchWebConfig, saveWebConfig, DEFAULT_WEB_CONFIG, saveCampaignToFirestore, deleteCampaignFromFirestore, saveJobToFirestore, deleteJobFromFirestore, updateRequestInFirestore, fetchSystemBadges, saveSystemBadge, deleteSystemBadge, OperationType, saveEventToFirestore, deleteEventFromFirestore, savePolicyDocumentToFirestore, deletePolicyDocumentFromFirestore, fetchVolunteerRegistrationsFromFirestore, updateVolunteerRegistrationStatusInFirestore, fetchGalleryImagesFromFirestore, saveGalleryImageToFirestore, deleteGalleryImageFromFirestore } from "../lib/firebaseSync";
@@ -3801,20 +3802,25 @@ export default function AdminPanel({
                                 </div>
 
                                 <div className="md:col-span-4 space-y-2 flex flex-col justify-between">
-                                  <div className="space-y-1">
-                                    <label className="block text-[9px] font-extrabold uppercase text-slate-400 mb-1">Cập nhật trạng thái:</label>
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="block text-[9px] font-extrabold uppercase text-slate-400">Trạng thái hiện tại:</label>
+                                      <RequestStatusBadge status={req.status} size="sm" />
+                                    </div>
                                     <div className="flex gap-2">
                                       <select
                                         value={req.status}
                                         onChange={async (e) => {
-                                          await handleRequestStatusChange(req.id, e.target.value, req.notes || "");
+                                          await handleRequestStatusChange(req.id, e.target.value as RequestStatus, req.notes || "");
                                           if (onRefreshRequests) onRefreshRequests();
                                         }}
-                                        className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-slate-500"
+                                        className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-xs focus:border-sky-500 focus:outline-none"
                                       >
                                         <option value={RequestStatus.SUBMITTED}>Đã tiếp nhận</option>
                                         <option value={RequestStatus.VERIFYING}>Đang xác minh</option>
+                                        <option value={RequestStatus.APPROVED}>Đã duyệt hỗ trợ</option>
                                         <option value={RequestStatus.COMPLETED}>Đã hoàn thành</option>
+                                        <option value={RequestStatus.REJECTED}>Từ chối hồ sơ</option>
                                       </select>
                                     </div>
                                   </div>

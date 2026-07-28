@@ -161,7 +161,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
           {/* Left Column - Intro Information */}
           <div className="lg:col-span-5 space-y-7 text-center lg:text-left">
             <div className="inline-flex items-center space-x-2 bg-sky-100 text-slate-800 border border-sky-500/20 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-sky-500 animate-pulse" />
+              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
               <span className="font-sans">Chung tay kiến tạo tương lai</span>
             </div>
 
@@ -193,7 +193,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
 
             {/* Interaction note */}
             <div className="pt-4 flex items-center justify-center lg:justify-start space-x-2 text-[10px] text-slate-500 italic">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Dữ liệu liên thông chính trực trực tiếp từ cổng an sinh Phường Phú Lợi</span>
             </div>
           </div>

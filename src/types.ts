@@ -17,6 +17,7 @@ export enum RequestStatus {
   VERIFYING = "Đang xác minh",
   APPROVED = "Đã duyệt hỗ trợ",
   COMPLETED = "Đã hoàn thành",
+  REJECTED = "Từ chối",
 }
 
 export interface CitizenRequest {

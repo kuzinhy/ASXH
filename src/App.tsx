@@ -5,15 +5,12 @@ import Stats from "./components/Stats";
 import ServiceHub from "./components/ServiceHub";
 import PartnersMarquee from "./components/PartnersMarquee";
 import ImageSlideshow from "./components/ImageSlideshow";
-import AIChatbot from "./components/AIChatbot";
-import FloatingChat from "./components/FloatingChat";
 import ContactMap from "./components/ContactMap";
 import Footer from "./components/Footer";
 import KindnessHearts from "./components/KindnessHearts";
 import AuthModal from "./components/AuthModal";
 import ScrollReveal from "./components/ScrollReveal";
 import NewsFeed from "./components/NewsFeed";
-import CommunityForum from "./components/CommunityForum";
 import EventCalendar from "./components/EventCalendar";
 import { PolicyDocuments } from "./components/PolicyDocuments";
 import CitizenSurvey from "./components/CitizenSurvey";
@@ -23,6 +20,7 @@ import { CitizenRequest, Campaign, Donation, JobListing, SupportCategory, Reques
 import { auth, db } from "./lib/firebase";
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { MTTQ_REPORT_CAMPAIGNS, MTTQ_REPORT_DONATIONS, MTTQ_REPORT_REQUESTS } from "./constants";
+import { getCachedData, setCachedData } from "./utils/cache";
 
 import { 
   seedDatabaseIfEmpty, 
@@ -458,56 +456,40 @@ export default function App() {
       // Proactively clear obsolete/heavy cached keys to optimize browser storage
       localStorage.removeItem("phuloi_news_articles");
 
-      const cachedReqs = localStorage.getItem("phuloi_requests");
-      const cachedCamps = localStorage.getItem("phuloi_campaigns");
-      const cachedDons = localStorage.getItem("phuloi_donations");
-      const cachedJobs = localStorage.getItem("phuloi_jobs");
-      // const cachedNews = localStorage.getItem("phuloi_news_articles");
-      const cachedEvents = localStorage.getItem("phuloi_events");
-      const cachedConfig = localStorage.getItem("phuloi_web_config");
+      const cachedReqs = getCachedData<CitizenRequest[]>("phuloi_requests");
+      const cachedCamps = getCachedData<Campaign[]>("phuloi_campaigns");
+      const cachedDons = getCachedData<Donation[]>("phuloi_donations");
+      const cachedJobs = getCachedData<JobListing[]>("phuloi_jobs");
+      const cachedEvents = getCachedData<CalendarEvent[]>("phuloi_events");
+      const cachedConfig = getCachedData<WebConfig>("phuloi_web_config");
 
-      if (cachedReqs) setRequests(JSON.parse(cachedReqs));
-      else {
-        setRequests(SEED_REQUESTS);
-        localStorage.setItem("phuloi_requests", JSON.stringify(SEED_REQUESTS));
-      }
+      if (cachedReqs) setRequests(cachedReqs);
+      else setRequests(SEED_REQUESTS);
 
-      if (cachedCamps) setCampaigns(JSON.parse(cachedCamps));
-      else {
-        setCampaigns(SEED_CAMPAIGNS);
-        localStorage.setItem("phuloi_campaigns", JSON.stringify(SEED_CAMPAIGNS));
-      }
+      if (cachedCamps) setCampaigns(cachedCamps);
+      else setCampaigns(SEED_CAMPAIGNS);
 
-      if (cachedDons) setDonations(JSON.parse(cachedDons));
-      else {
-        setDonations(SEED_DONATIONS);
-        localStorage.setItem("phuloi_donations", JSON.stringify(SEED_DONATIONS));
-      }
+      if (cachedDons) setDonations(cachedDons);
+      else setDonations(SEED_DONATIONS);
 
-      if (cachedJobs) setJobs(JSON.parse(cachedJobs));
-      else {
-        setJobs(SEED_JOBS);
-        localStorage.setItem("phuloi_jobs", JSON.stringify(SEED_JOBS));
-      }
+      if (cachedJobs) setJobs(cachedJobs);
+      else setJobs(SEED_JOBS);
 
       setNewsArticle(DEFAULT_NEWS_ARTICLES);
 
-      if (cachedEvents) setEvents(JSON.parse(cachedEvents));
-      else {
-        setEvents(DEFAULT_EVENTS);
-        localStorage.setItem("phuloi_events", JSON.stringify(DEFAULT_EVENTS));
-      }
-      if (cachedConfig) setWebConfig(JSON.parse(cachedConfig));
+      if (cachedEvents) setEvents(cachedEvents);
+      else setEvents(DEFAULT_EVENTS);
+
+      if (cachedConfig) setWebConfig(cachedConfig);
       
-      const cachedContributions = localStorage.getItem("phuloi_party_contributions");
-      if (cachedContributions) setPartyContributions(JSON.parse(cachedContributions));
+      const cachedContributions = getCachedData<PartyContribution[]>("phuloi_party_contributions");
+      if (cachedContributions) setPartyContributions(cachedContributions);
       
-      const cachedPartners = localStorage.getItem("phuloi_official_partners");
+      const cachedPartners = getCachedData<OfficialPartner[]>("phuloi_official_partners");
       if (cachedPartners) {
-        setOfficialPartners(JSON.parse(cachedPartners));
+        setOfficialPartners(cachedPartners);
       } else {
         setOfficialPartners(DEFAULT_OFFICIAL_PARTNERS);
-        localStorage.setItem("phuloi_official_partners", JSON.stringify(DEFAULT_OFFICIAL_PARTNERS));
       }
     } catch (e) {
       console.error("Local storage access failed, using pure code seeds:", e);
@@ -757,11 +739,11 @@ export default function App() {
           if (donsRes.status === 'fulfilled') setDonations(donsRes.value);
           if (configRes.status === 'fulfilled') {
             setWebConfig(configRes.value);
-            localStorage.setItem("phuloi_web_config", JSON.stringify(configRes.value));
+            setCachedData("phuloi_web_config", configRes.value);
           }
           if (eventsRes.status === 'fulfilled') {
             setEvents(eventsRes.value);
-            localStorage.setItem("phuloi_events", JSON.stringify(eventsRes.value));
+            setCachedData("phuloi_events", eventsRes.value);
           }
           if (newsRes.status === 'fulfilled') {
             const sortedNews = newsRes.value.sort((a, b) => safeParseDate(b.date) - safeParseDate(a.date));
@@ -770,11 +752,11 @@ export default function App() {
           if (visitsRes.status === 'fulfilled') setVisitorStats(visitsRes.value);
           if (partnersRes.status === 'fulfilled') {
             setOfficialPartners(partnersRes.value);
-            localStorage.setItem("phuloi_official_partners", JSON.stringify(partnersRes.value));
+            setCachedData("phuloi_official_partners", partnersRes.value);
           }
           if (contributionsRes.status === 'fulfilled') {
             setPartyContributions(contributionsRes.value);
-            localStorage.setItem("phuloi_party_contributions", JSON.stringify(contributionsRes.value));
+            setCachedData("phuloi_party_contributions", contributionsRes.value);
           }
           if (policyRes.status === 'fulfilled') setPolicyDocuments(policyRes.value);
         }
@@ -1880,13 +1862,6 @@ const handleDeleteNews = async (id: string) => {
         </div>
       </div>
 
-      {/* 5.5 Community Forum */}
-      <div className="max-w-7xl mx-auto px-4 pb-8 w-full h-[600px]">
-        <ScrollReveal duration={1.0} yOffset={40} className="h-full">
-          <CommunityForum currentUser={currentUser} onRequireAuth={() => setIsAuthModalOpen(true)} />
-        </ScrollReveal>
-      </div>
-
       {/* 5.5 Event Calendar */}
       <div className="max-w-7xl mx-auto px-4 pb-8 w-full">
         <ScrollReveal duration={1.0} yOffset={40}>
@@ -1900,11 +1875,6 @@ const handleDeleteNews = async (id: string) => {
           <PolicyDocuments documents={policyDocuments} />
         </ScrollReveal>
       </div>
-
-      {/* 6. AI Virtual Assistant (Gemini integration) */}
-      <ScrollReveal duration={1.0} yOffset={45}>
-        <AIChatbot webConfig={webConfig} />
-      </ScrollReveal>
 
       {/* 7. Typical Partners Marquee (Đặc tả các đối tác đồng hành) */}
       <ScrollReveal duration={1.0} yOffset={45}>
@@ -1921,9 +1891,6 @@ const handleDeleteNews = async (id: string) => {
 
       {/* 11. Interactive floating hearts (Emotional Connection Widget) */}
       <KindnessHearts news={newsArticles} />
-
-      {/* 12. Floating Online Support Chat Widget (Khung chat hỗ trợ trực tuyến 24/7) */}
-      <FloatingChat />
 
       {/* Real-time automated Toast Notifications Container */}
       <div id="app-toast-container" className="fixed top-24 right-4 sm:right-6 z-50 flex flex-col gap-3 max-w-md w-[calc(100%-2rem)] md:w-96 pointer-events-none">

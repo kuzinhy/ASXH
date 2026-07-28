@@ -175,45 +175,61 @@ export async function seedDatabaseIfEmpty(defaultNews: any[] = [], defaultEvents
     const q = query(collection(db, "campaigns"), limit(1));
     const campsSnap = await getDocs(q);
     if (campsSnap.empty) {
-      console.log("Database is empty, seeding default data...");
-      for (const camp of SEED_CAMPAIGNS) {
-        await setDoc(doc(db, "campaigns", camp.id), camp);
-      }
-      for (const req of SEED_REQUESTS) {
-        await setDoc(doc(db, "requests", req.id), req);
-      }
-      for (const don of SEED_DONATIONS) {
-        await setDoc(doc(db, "donations", don.id), don);
-      }
-      for (const job of SEED_JOBS) {
-        await setDoc(doc(db, "jobs", job.id), job);
-      }
-      
-      // Also seed other defaults
-      if (defaultNews.length > 0) {
-        for (const news of defaultNews) {
-          await setDoc(doc(db, "news_articles", news.id), news);
+      console.log("Database is empty, attempting to seed default data...");
+      try {
+        for (const camp of SEED_CAMPAIGNS) {
+          await setDoc(doc(db, "campaigns", camp.id), camp);
+        }
+        for (const req of SEED_REQUESTS) {
+          await setDoc(doc(db, "requests", req.id), req);
+        }
+        for (const don of SEED_DONATIONS) {
+          await setDoc(doc(db, "donations", don.id), don);
+        }
+        for (const job of SEED_JOBS) {
+          await setDoc(doc(db, "jobs", job.id), job);
+        }
+        
+        // Also seed other defaults
+        if (defaultNews.length > 0) {
+          for (const news of defaultNews) {
+            await setDoc(doc(db, "news_articles", news.id), news);
+          }
+        }
+        if (defaultEvents.length > 0) {
+          for (const evt of defaultEvents) {
+            await setDoc(doc(db, "events", evt.id), evt);
+          }
+        }
+        if (defaultPartners.length > 0) {
+          for (const partner of defaultPartners) {
+            await setDoc(doc(db, "official_partners", partner.id), partner);
+          }
+        }
+        if (defaultPolicyDocs.length > 0) {
+          for (const docItem of defaultPolicyDocs) {
+            await setDoc(doc(db, "policyDocuments", docItem.id), docItem);
+          }
+        }
+        console.log("Database seeded successfully.");
+      } catch (seedErr: any) {
+        const errMsg = seedErr?.message || String(seedErr);
+        if (errMsg.includes("permission") || errMsg.includes("Missing or insufficient permissions")) {
+          console.warn("Database auto-seeding skipped (requires administrative permission).");
+        } else if (errMsg.includes("offline") || errMsg.includes("Could not reach Cloud Firestore backend") || errMsg.includes("client is offline")) {
+          console.warn("Database auto-seeding skipped (Firestore offline).");
+        } else {
+          console.warn("Database auto-seeding warning:", seedErr);
         }
       }
-      if (defaultEvents.length > 0) {
-        for (const evt of defaultEvents) {
-          await setDoc(doc(db, "events", evt.id), evt);
-        }
-      }
-      if (defaultPartners.length > 0) {
-        for (const partner of defaultPartners) {
-          await setDoc(doc(db, "official_partners", partner.id), partner);
-        }
-      }
-      if (defaultPolicyDocs.length > 0) {
-        for (const docItem of defaultPolicyDocs) {
-          await setDoc(doc(db, "policyDocuments", docItem.id), docItem);
-        }
-      }
-      console.log("Database seeded successfully.");
     }
-  } catch (err) {
-    console.error("Error seeding database:", err);
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    if (errMsg.includes("offline") || errMsg.includes("permission") || errMsg.includes("Could not reach Cloud Firestore backend") || errMsg.includes("client is offline")) {
+      console.warn("Database connection check skipped (offline or permission restricted).");
+    } else {
+      console.warn("Error checking database state:", err);
+    }
   }
 }
 
@@ -679,8 +695,15 @@ export async function fetchLoveCount(): Promise<number> {
     if (docSnap.exists()) {
       return (docSnap.data() as any).loveCount || 12480;
     }
-  } catch (err) {
-    console.error("Error fetching love count:", err);
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    if (errMsg.includes("offline") || errMsg.includes("Could not reach Cloud Firestore backend") || errMsg.includes("client is offline")) {
+      console.warn("Firestore Offline: using default love count.");
+    } else if (errMsg.includes("permission")) {
+      console.warn("Permission denied for loveCount fetch.");
+    } else {
+      console.warn("Error fetching love count:", err);
+    }
   }
   return 12480;
 }
@@ -696,8 +719,15 @@ export async function incrementLoveCount(): Promise<number> {
     if (updatedSnap.exists()) {
       return (updatedSnap.data() as any).loveCount || 12480;
     }
-  } catch (err) {
-    console.error("Error updating love count:", err);
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    if (errMsg.includes("offline") || errMsg.includes("Could not reach Cloud Firestore backend") || errMsg.includes("client is offline")) {
+      console.warn("Firestore Offline: love count increment skipped.");
+    } else if (errMsg.includes("permission")) {
+      console.warn("Permission denied for loveCount update.");
+    } else {
+      console.warn("Error updating love count:", err);
+    }
   }
   return 12480;
 }

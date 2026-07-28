@@ -203,6 +203,7 @@ export default function PushNotificationCenter({ onRequestsUpdated, requests }: 
         nextStatus === RequestStatus.VERIFYING ? "Đoàn liên ngành chuẩn bị xuống hiện trường xác minh trong 24 giờ tới." :
         nextStatus === RequestStatus.APPROVED ? "Hồ sơ được thẩm định hợp lệ. Đã duyệt gói hỗ trợ và phân bổ thủ tục nhận quà." :
         nextStatus === RequestStatus.COMPLETED ? "Đã trao gói cứu trợ trực tiếp tận tay người dân và hoàn thành ký nhận." :
+        nextStatus === RequestStatus.REJECTED ? "Hồ sơ chưa đủ điều kiện tiếp nhận. Bà con liên hệ Ban Chỉ Đạo MTTQ Phường Phú Lợi để biết thêm chi tiết." :
         "Hồ sơ đã được gửi thành công, chờ thẩm định.";
 
       // 1. Update Firestore Document
@@ -648,18 +649,30 @@ export default function PushNotificationCenter({ onRequestsUpdated, requests }: 
                   <button
                     disabled={!selectedReqId || isUpdatingStatus}
                     onClick={() => handleTransitionStatus(RequestStatus.COMPLETED)}
-                    className="p-2.5 rounded-xl border border-emerald-500/20 hover:border-emerald-500/50 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 text-left text-xs font-bold transition flex items-center justify-between col-span-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed group"
+                    className="p-2.5 rounded-xl border border-emerald-500/20 hover:border-emerald-500/50 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 text-left text-xs font-bold transition flex items-center justify-between cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed group"
                   >
-                    <div className="space-y-0.5 flex items-center space-x-2">
-                      <div className="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
-                        <UserCheck className="w-4 h-4 text-emerald-600" />
+                    <div className="space-y-0.5 flex items-center space-x-1.5">
+                      <div className="bg-emerald-500/10 p-1 rounded-lg border border-emerald-500/20">
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
                       </div>
                       <div className="text-left">
-                        <div className="text-[9px] uppercase font-light text-emerald-500">Bước 3 (Hoàn tất)</div>
-                        <div className="text-xs">Hoàn thành hỗ trợ</div>
+                        <div className="text-[9px] uppercase font-light text-emerald-500">Bước 3</div>
+                        <div className="text-xs">Hoàn thành</div>
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-1 transition-transform" />
+                  </button>
+
+                  <button
+                    disabled={!selectedReqId || isUpdatingStatus}
+                    onClick={() => handleTransitionStatus(RequestStatus.REJECTED)}
+                    className="p-2.5 rounded-xl border border-rose-500/20 hover:border-rose-500/50 bg-rose-500/5 hover:bg-rose-500/10 text-rose-600 text-left text-xs font-bold transition flex items-center justify-between cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed group"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="text-[9px] uppercase font-light text-rose-500">Từ chối</div>
+                      <div className="text-xs">Từ chối hồ sơ</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-rose-500 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>
