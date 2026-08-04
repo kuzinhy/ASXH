@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { BookOpen, FileText, Landmark, Scale, ChevronRight, Download, ExternalLink, Search, Filter } from 'lucide-react';
+import { 
+  BookOpen, FileText, Landmark, Scale, ChevronRight, Download, ExternalLink, Search, Filter, 
+  X, Clock, Building, CheckCircle2, ArrowRight, AlertCircle, Calendar, User, FileCheck, Printer, Eye 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PolicyDocument } from '../types';
 
 // Mock data for policy documents
 const POLICY_DOCUMENTS = [
@@ -11,7 +15,7 @@ const POLICY_DOCUMENTS = [
     category: 'Nghị quyết',
     agency: 'Ban Chấp hành Trung ương Đảng',
     date: '24/11/2023',
-    icon: <Landmark className="w-5 h-5" />,
+    iconName: 'Landmark',
     color: 'text-rose-600',
     bg: 'bg-rose-50',
     border: 'border-rose-100',
@@ -24,7 +28,7 @@ const POLICY_DOCUMENTS = [
     category: 'Quy trình',
     agency: 'Chính phủ',
     date: '15/03/2021',
-    icon: <Scale className="w-5 h-5" />,
+    iconName: 'Scale',
     color: 'text-indigo-600',
     bg: 'bg-indigo-50',
     border: 'border-indigo-100',
@@ -37,7 +41,7 @@ const POLICY_DOCUMENTS = [
     category: 'Quyết định',
     agency: 'Thủ tướng Chính phủ',
     date: '14/10/2021',
-    icon: <BookOpen className="w-5 h-5" />,
+    iconName: 'BookOpen',
     color: 'text-emerald-600',
     bg: 'bg-emerald-50',
     border: 'border-emerald-100',
@@ -50,7 +54,7 @@ const POLICY_DOCUMENTS = [
     category: 'Chỉ thị',
     agency: 'Ban Bí thư',
     date: '19/07/2017',
-    icon: <FileText className="w-5 h-5" />,
+    iconName: 'FileText',
     color: 'text-amber-600',
     bg: 'bg-amber-50',
     border: 'border-amber-100',
@@ -59,8 +63,6 @@ const POLICY_DOCUMENTS = [
 ];
 
 const CATEGORIES = ["Tất cả", "Nghị quyết", "Nghị định", "Quyết định", "Chỉ thị", "Quy trình"];
-
-import { PolicyDocument } from '../types';
 
 interface PolicyDocumentsProps {
   documents: PolicyDocument[];
@@ -81,6 +83,7 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
 
   const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState<PolicyDocument | typeof POLICY_DOCUMENTS[0] | null>(null);
 
   const filteredDocs = activeDocs.filter(doc => {
     const matchesCat = activeCategory === "Tất cả" || doc.category === activeCategory;
@@ -89,18 +92,17 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
     return matchesCat && matchesSearch;
   });
 
-  const handleDownload = (link: string, title: string) => {
+  const handleDownload = (e: React.MouseEvent, link: string, title: string) => {
+    e.stopPropagation();
     if (!link || link === "#") {
       alert("Văn bản này hiện chưa đính kèm tệp tin chi tiết.");
       return;
     }
     try {
       if (link.startsWith("data:")) {
-        // It's an uploaded file Base64 Data URL
         const linkElement = document.createElement('a');
         linkElement.href = link;
         
-        // Try to identify extension from MIME type
         const mimeMatch = link.match(/data:([^;]+);/);
         let extension = "pdf";
         if (mimeMatch && mimeMatch[1]) {
@@ -112,18 +114,23 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
           else if (mime.includes("jpeg") || mime.includes("jpg")) extension = "jpg";
         }
         
-        // Clean vietnamese accents or characters for clean filenames if preferred, or keep as is
         linkElement.download = `${title.replace(/[/\\?%*:|"<>\s]+/g, "_")}.${extension}`;
         document.body.appendChild(linkElement);
         linkElement.click();
         document.body.removeChild(linkElement);
       } else {
-        // External link (e.g. Google Drive URL)
         window.open(link, "_blank", "noopener,noreferrer");
       }
     } catch (err) {
       console.error("Lỗi khi mở/tải tài liệu:", err);
     }
+  };
+
+  const isDecree20Process = (doc: any) => {
+    if (!doc) return false;
+    return doc.id === 'pol-2' || 
+           doc.title.includes('20/2021') || 
+           doc.title.toLowerCase().includes('quy trình xét duyệt');
   };
 
   return (
@@ -162,7 +169,7 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
               activeCategory === cat 
                 ? 'bg-slate-800 text-white shadow-md' 
                 : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -184,15 +191,16 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2, delay: idx * 0.05 }}
-              className={`p-5 rounded-2xl border ${doc.border} bg-white hover:${doc.bg} transition-colors group relative overflow-hidden`}
+              onClick={() => setSelectedDoc(doc)}
+              className={`p-5 rounded-2xl border ${doc.border || 'border-slate-200'} bg-white hover:${doc.bg || 'bg-slate-50'} transition-all cursor-pointer group relative overflow-hidden shadow-xs hover:shadow-md`}
             >
               <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-xl ${doc.bg} ${doc.color} shrink-0`}>
-                  {doc.icon ? doc.icon : renderIcon(doc.category)}
+                <div className={`p-3 rounded-xl ${doc.bg || 'bg-slate-100'} ${doc.color || 'text-slate-700'} shrink-0`}>
+                  {renderIcon(doc.category)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${doc.bg} ${doc.color}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${doc.bg || 'bg-slate-100'} ${doc.color || 'text-slate-700'}`}>
                       {doc.category}
                     </span>
                     <span className="text-[10px] text-slate-400 font-semibold font-mono">
@@ -213,18 +221,21 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
                     
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => handleDownload(doc.link, doc.title)}
+                        onClick={(e) => handleDownload(e, doc.link, doc.title)}
                         className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition cursor-pointer" 
-                        title="Tải về"
+                        title="Tải về / Mở tệp"
                       >
                         <Download className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => handleDownload(doc.link, doc.title)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDoc(doc);
+                        }}
                         className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition cursor-pointer" 
-                        title="Xem chi tiết"
+                        title="Xem chi tiết quy trình"
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        <Eye className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -254,6 +265,290 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* DETAIL MODAL FOR POLICY DOCUMENT & DECREE 20/2021 WORKFLOW */}
+      <AnimatePresence>
+        {selectedDoc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <Scale className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                      {selectedDoc.category} • {selectedDoc.agency}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black text-slate-800 leading-snug mt-0.5">
+                      {selectedDoc.title}
+                    </h3>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => setSelectedDoc(null)}
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition cursor-pointer shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Content Body */}
+              <div className="p-6 sm:p-8 space-y-8 flex-1">
+                {isDecree20Process(selectedDoc) ? (
+                  /* FULL DETAILED DECREE 20/2021/NĐ-CP APPROVAL PROCESS DISPLAY */
+                  <div className="space-y-8">
+                    {/* Header Summary Banner */}
+                    <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-blue-950 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+                      <div className="relative z-10">
+                        <div className="inline-flex items-center gap-2 bg-amber-400/20 border border-amber-300/30 text-amber-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+                          <Clock className="w-3.5 h-3.5" />
+                          Tổng thời gian tối đa: 16 ngày làm việc
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-white">
+                          QUY TRÌNH XÉT DUYỆT HỒ SƠ AN SINH XÃ HỘI
+                        </h2>
+                        <p className="text-xs sm:text-sm text-slate-300 font-light mt-1 max-w-2xl">
+                          (Theo quy định tại Nghị định số 20/2021/NĐ-CP của Chính phủ quy định chính sách trợ giúp xã hội đối với đối tượng bảo trợ xã hội)
+                        </p>
+                      </div>
+                      <div className="absolute -right-10 -bottom-10 opacity-10 text-white">
+                        <Scale className="w-64 h-64" />
+                      </div>
+                    </div>
+
+                    {/* SECTION I: SƠ ĐỒ TÓM TẤT TIẾN TRÌNH */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                        <FileCheck className="w-4 h-4 text-indigo-600" />
+                        I. Sơ Đồ Tóm Tắt Tiến Trình
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 relative">
+                        {/* Flow Card 1 */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+                          <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Bắt đầu</div>
+                          <div className="font-extrabold text-xs text-slate-800 mb-2">1. Người dân nộp hồ sơ</div>
+                          <p className="text-[11px] text-slate-500 font-light">Nộp tờ khai Mẫu 01 & giấy tờ chứng minh hoàn cảnh.</p>
+                        </div>
+
+                        {/* Flow Card 2 */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between relative">
+                          <div className="text-[10px] font-bold text-sky-600 uppercase tracking-wider mb-1">Cấp Xã (07 ngày)</div>
+                          <div className="font-extrabold text-xs text-slate-800 mb-2">2. UBND Cấp Xã</div>
+                          <p className="text-[11px] text-slate-500 font-light">Thẩm định thực tế & Niêm yết công khai tại trụ sở.</p>
+                        </div>
+
+                        {/* Flow Card 3 */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+                          <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Cấp Huyện (07 ngày)</div>
+                          <div className="font-extrabold text-xs text-slate-800 mb-2">3. Phòng LĐ-TB&XH</div>
+                          <p className="text-[11px] text-slate-500 font-light">Tiếp nhận, thẩm định chuyên môn & đối chiếu pháp luật.</p>
+                        </div>
+
+                        {/* Flow Card 4 */}
+                        <div className="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-xs flex flex-col justify-between">
+                          <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Kết quả</div>
+                          <div className="font-extrabold text-xs text-slate-800 mb-2">4. Chủ tịch UBND Cấp Huyện</div>
+                          <p className="text-[11px] text-slate-500 font-light">Ký ban hành Quyết định trợ cấp hàng tháng.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION II: BẢNG CHI TIẾT QUY TRÌNH XÉT DUYỆT HƯỞNG MỚI */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                          <Building className="w-4 h-4 text-indigo-600" />
+                          II. Bảng Chi Tiết Quy Trình Xét Duyệt Hưởng Mới (6 Bước)
+                        </h4>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          Thời gian tối đa: <strong className="text-slate-800 font-bold">16 ngày làm việc</strong>
+                        </span>
+                      </div>
+
+                      {/* Responsive Steps List */}
+                      <div className="space-y-3">
+                        {/* Step 1 */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:border-indigo-200 transition">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">1</span>
+                              <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">Người nộp hồ sơ (hoặc người giám hộ)</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                              Thời điểm bắt đầu
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed font-light">
+                            Nộp <strong>Tờ khai (Mẫu số 01 kèm Nghị định 20/2021/NĐ-CP)</strong> và các giấy tờ chứng minh hoàn cảnh tại UBND cấp xã (qua các hình thức: <em>trực tiếp, bưu điện hoặc cổng dịch vụ công trực tuyến</em>).
+                          </p>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:border-indigo-200 transition">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">2</span>
+                              <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">Công chức phụ trách LĐ-TB&XH cấp xã</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                              Trong vòng 05 ngày làm việc đầu
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed font-light">
+                            Tiếp nhận, kiểm tra tính hợp lệ và đầy đủ của hồ sơ, tiến hành <strong>xác minh thực tế hoàn cảnh</strong> của đối tượng tại địa bàn.
+                          </p>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:border-indigo-200 transition">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">3</span>
+                              <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">Hội đồng xét duyệt trợ giúp xã hội cấp xã</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                              02 ngày làm việc (thời gian niêm yết)
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed font-light">
+                            Tổ chức họp xét duyệt công khai, lập biên bản và tiến hành <strong>niêm yết công khai kết quả xét duyệt</strong> tại trụ sở UBND cấp xã.
+                          </p>
+                        </div>
+
+                        {/* Step 4 */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:border-indigo-200 transition">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">4</span>
+                              <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">Chủ tịch UBND cấp xã</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                              Ngay sau khi hết hạn niêm yết
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed font-light">
+                            Trường hợp không có khiếu nại sau thời gian niêm yết, Chủ tịch UBND cấp xã ký văn bản kiến nghị kèm hồ sơ gửi lên Phòng LĐ-TB&XH cấp huyện.
+                          </p>
+                        </div>
+
+                        {/* Step 5 */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:border-indigo-200 transition">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0">5</span>
+                              <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">Phòng LĐ-TB&XH cấp huyện</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                              Trong vòng 07 ngày làm việc
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed font-light">
+                            Tiếp nhận hồ sơ từ cấp xã chuyển lên, tiến hành thẩm định chuyên môn, đối chiếu các quy định và tiêu chuẩn pháp luật hiện hành.
+                          </p>
+                        </div>
+
+                        {/* Step 6 */}
+                        <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-4 shadow-xs transition">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">6</span>
+                              <span className="font-extrabold text-xs text-emerald-950 uppercase tracking-wide">Chủ tịch UBND cấp huyện</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                              Nằm trong hạn 07 ngày của Bước 5
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-700 leading-relaxed font-light">
+                            <strong>Ký ban hành Quyết định trợ cấp xã hội hàng tháng</strong> cho đối tượng. Trường hợp hồ sơ không đủ điều kiện, phải trả lời bằng văn bản nêu rõ lý do từ chối.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION III: CÁC LƯU Ý QUAN TRỌNG VỀ THỜI GIAN */}
+                    <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-5 space-y-3">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-amber-900 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                        III. Các Lưu Ý Quan Trọng Về Thời Gian
+                      </h4>
+
+                      <ul className="space-y-2 text-xs text-slate-700 leading-relaxed">
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                          <span><strong>Thời điểm tính hưởng:</strong> Tiền trợ cấp hàng tháng của đối tượng được tính bắt đầu từ <em>tháng Chủ tịch UBND cấp huyện ký Quyết định hưởng trợ cấp</em>.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                          <span><strong>Quy trình thôi hưởng:</strong> Khi đối tượng qua đời hoặc không còn đủ điều kiện, cấp xã phải báo cáo trong <strong>03 ngày làm việc</strong>; cấp huyện phải ra quyết định thôi hưởng trong <strong>03 ngày làm việc tiếp theo</strong>. Việc dừng trợ cấp tính từ tháng ngay sau tháng đối tượng chết hoặc không còn đủ điều kiện.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  /* GENERAL POLICY DOCUMENT DISPLAY */
+                  <div className="space-y-6">
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-xs font-bold text-slate-500">Cơ quan ban hành:</span>
+                        <span className="text-xs font-extrabold text-slate-800 bg-white px-3 py-1 rounded-lg border border-slate-200">
+                          {selectedDoc.agency}
+                        </span>
+                        <span className="text-xs font-bold text-slate-500 ml-auto">Ngày ban hành: {selectedDoc.date}</span>
+                      </div>
+                      <h2 className="text-lg font-black text-slate-800 mb-3">{selectedDoc.title}</h2>
+                      <p className="text-sm text-slate-600 leading-relaxed font-light">{selectedDoc.description}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="sticky bottom-0 bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3 rounded-b-3xl">
+                <span className="text-xs text-slate-500 font-medium">
+                  Cập nhật theo Nghị định 20/2021/NĐ-CP
+                </span>
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-4 h-4" />
+                    In văn bản
+                  </button>
+                  
+                  {selectedDoc.link && selectedDoc.link !== "#" && (
+                    <button
+                      onClick={(e) => handleDownload(e, selectedDoc.link, selectedDoc.title)}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Tải / Xem file đính kèm
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setSelectedDoc(null)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    Đóng lại
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
