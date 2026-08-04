@@ -1586,13 +1586,11 @@ const handleDeleteNews = async (id: string) => {
                   { id: "policies", icon: Landmark, label: "Chính sách An sinh" },
                   { id: "events", icon: Calendar, label: "Quản lý Lịch Sự kiện" },
                   { id: "volunteers", icon: HeartHandshake, label: "Xét duyệt Tình nguyện viên", iconClass: "text-rose-500" },
-                  { id: "brain", icon: Brain, label: "Bộ脑 Trợ lý (Drive)", iconClass: "text-amber-500" },
                   { id: "partners", icon: Award, label: "Đơn vị đồng hành", iconClass: "text-indigo-500" },
                   { id: "forum", icon: MessageSquare, label: "Diễn đàn & Phản ánh", iconClass: "text-indigo-500" },
                   { id: "partyFeedback", icon: Vote, label: "Góp ý xây dựng Đảng", iconClass: "text-red-600" },
                   { id: "aiPersonality", icon: Sparkles, label: "Cấu hình AI", iconClass: "text-sky-500" },
-                  { id: "gallery", icon: ImagePlus, label: "Quản lý Thư viện Ảnh", iconClass: "text-emerald-500" },
-                  { id: "imageUpload", icon: Link2, label: "Công cụ Link Ảnh", iconClass: "text-slate-400" }
+                  { id: "gallery", icon: ImagePlus, label: "Quản lý Thư viện Ảnh", iconClass: "text-emerald-500" }
                 ].map(tab => {
                   const Icon = tab.icon;
                   const isActive = adminActiveTab === tab.id;

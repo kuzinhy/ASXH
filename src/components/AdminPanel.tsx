@@ -22,7 +22,6 @@ import { googleSignIn, getAccessToken } from "../lib/googleAuth";
 import { sendSmsNotification, sendEmailNotification } from "../lib/email";
 import { auth } from "../lib/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { syncDriveFolderToFirestore, fetchSyncedBrainDocuments, DEFAULT_FOLDER_ID, BrainDocument } from "../lib/brainSync";
 import { fuzzyMatch, smartSortRequests, searchRank } from "../utils/algorithms";
 import { AccessLog, getOrCreateAccessLogs, simulateIncomingLiveVisitor } from "../lib/analyticsSync";
 import { safeParseDate, formatDateVN } from "../lib/dateUtils";
@@ -63,7 +62,7 @@ interface AdminPanelProps {
   onUpdatePartyContribution?: (id: string, updates: Partial<PartyContribution>) => Promise<void>;
 }
 
-type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "brain" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers" | "imageUpload" | "gallery";
+type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers" | "gallery";
 
 
 interface ActivityLog {
@@ -233,83 +232,6 @@ export default function AdminPanel({
     );
   };
 
-  // States for Assistant Brain & Google Drive
-  const [syncFolderId, setSyncFolderId] = useState(DEFAULT_FOLDER_ID);
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number; currentFileName: string } | null>(null);
-  const [syncStatus, setSyncStatus] = useState<{ text: string; isError: boolean } | null>(null);
-  const [manualToken, setManualToken] = useState("");
-  const [syncedDocs, setSyncedDocs] = useState<BrainDocument[]>([]);
-
-  const loadSyncedDocs = async () => {
-    const docs = await fetchSyncedBrainDocuments();
-    setSyncedDocs(docs);
-  };
-
-  useEffect(() => {
-    loadSyncedDocs();
-  }, []);
-
-  const handleGoogleSignInAndSync = async () => {
-    setSyncing(true);
-    setSyncStatus(null);
-    setSyncProgress(null);
-    try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope("https://www.googleapis.com/auth/drive.readonly");
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const token = credential?.accessToken;
-
-      if (!token) {
-        throw new Error("Không thể nhận diện mã Access Token từ tài khoản Google của bạn.");
-      }
-
-      const syncResult = await syncDriveFolderToFirestore(token, syncFolderId, (prog) => {
-        setSyncProgress(prog);
-      });
-
-      if (syncResult.success) {
-        setSyncStatus({ text: `Đồng bộ thành công ${syncResult.syncedCount} tài liệu từ Google Drive!`, isError: false });
-        loadSyncedDocs();
-      } else {
-        setSyncStatus({ text: `Đồng bộ hoàn tất với một số lỗi: ${syncResult.errors.join(", ")}`, isError: true });
-      }
-    } catch (err: any) {
-      console.error(err);
-      setSyncStatus({ text: `Lỗi xác thực hoặc đồng bộ: ${err.message || String(err)}`, isError: true });
-    } finally {
-      setSyncing(false);
-      setSyncProgress(null);
-    }
-  };
-
-  const handleManualTokenSync = async () => {
-    if (!manualToken.trim()) return;
-    setSyncing(true);
-    setSyncStatus(null);
-    setSyncProgress(null);
-    try {
-      const syncResult = await syncDriveFolderToFirestore(manualToken, syncFolderId, (prog) => {
-        setSyncProgress(prog);
-      });
-
-      if (syncResult.success) {
-        setSyncStatus({ text: `Đồng bộ thành công ${syncResult.syncedCount} tài liệu từ Google Drive bằng Token thủ công!`, isError: false });
-        loadSyncedDocs();
-        setManualToken("");
-      } else {
-        setSyncStatus({ text: `Đồng bộ thất bại: ${syncResult.errors.join(", ")}`, isError: true });
-      }
-    } catch (err: any) {
-      console.error(err);
-      setSyncStatus({ text: `Lỗi đồng bộ bằng Token: ${err.message || String(err)}`, isError: true });
-    } finally {
-      setSyncing(false);
-      setSyncProgress(null);
-    }
-  };
-  
   // Local copies for editing
   const [campaignsList, setCampaignsList] = useState<Campaign[]>(allCampaigns);
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
@@ -547,11 +469,9 @@ export default function AdminPanel({
   const [manualNewsSnippet, setManualNewsSnippet] = useState("");
   const [manualNewsImageUrl, setManualNewsImageUrl] = useState("");
   const [isUploadingManualNewsImage, setIsUploadingManualNewsImage] = useState(false);
-  const [isUploadingDriveImage, setIsUploadingDriveImage] = useState(false);
   const [isUploadingCampImage, setIsUploadingCampImage] = useState(false);
   const [isUploadingJobImage, setIsUploadingJobImage] = useState(false);
   const [isUploadingPartnerImage, setIsUploadingPartnerImage] = useState(false);
-  const [uploadedDriveImageUrl, setUploadedDriveImageUrl] = useState("");
   const [manualNewsSourceUrl, setManualNewsSourceUrl] = useState("");
   const [newsSearchQuery, setNewsSearchQuery] = useState("");
   const [newsCategoryFilter, setNewsCategoryFilter] = useState("All");
@@ -6035,179 +5955,6 @@ export default function AdminPanel({
                     </motion.div>
                   )}
 
-                  {activeTab === "brain" && (
-                    <motion.div
-                      key="brain"
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -15 }}
-                      transition={{ duration: 0.3 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-5 gap-4">
-                        <div>
-                          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <span className="text-amber-500">🧠</span> Bộ Não Trợ Lý Ảo (Google Drive Context)
-                          </h2>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Kết nối trợ lý ảo của người dân với dữ liệu thực tế từ thư mục Google Drive của Ủy ban.
-                          </p>
-                        </div>
-                        <a 
-                          href="https://drive.google.com/drive/folders/1RIIJqdHEW_4S7rVE2fTLK0DSdqz3CCne" 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 hover:underline bg-sky-50 px-3 py-2 rounded-xl"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Mở Thư Mục Drive Của Tôi
-                        </a>
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Cấu hình kết nối */}
-                        <div className="lg:col-span-1 bg-slate-50 border border-slate-200/60 rounded-3xl p-5 space-y-4 text-left">
-                          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <Settings className="w-4 h-4 text-slate-500" /> Cấu hình Kết nối
-                          </h3>
-                          
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mã thư mục (Folder ID)</label>
-                            <input 
-                              type="text" 
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                              value={syncFolderId}
-                              onChange={(e) => setSyncFolderId(e.target.value)}
-                            />
-                            <span className="text-[9px] text-slate-400 block leading-tight">Mã định danh nằm ở cuối liên kết URL thư mục Google Drive của bạn.</span>
-                          </div>
-
-                          <div className="pt-2 border-t border-slate-200/60 space-y-3">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-800 block">⚡ Phương thức 1: Đăng nhập Google</span>
-                            <button
-                              onClick={handleGoogleSignInAndSync}
-                              disabled={syncing}
-                              className="w-full bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                            >
-                              {syncing ? (
-                                <>
-                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                  Đang đồng bộ...
-                                </>
-                              ) : (
-                                <>
-                                  <Lock className="w-3.5 h-3.5 animate-pulse" />
-                                  Xác thực & Đồng bộ
-                                </>
-                              )}
-                            </button>
-                            <span className="text-[9px] text-slate-400 block leading-tight">Yêu cầu quyền truy cập đọc các tệp tin trong thư mục Drive để chuyển thành trí thông minh của AI.</span>
-                          </div>
-
-                          <div className="pt-2 border-t border-slate-200/60 space-y-3">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-800 block">🛠️ Phương thức 2: Nhập mã Access Token thủ công</span>
-                            <div className="space-y-1.5">
-                              <input 
-                                type="password" 
-                                placeholder="Nhập OAuth Access Token..."
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                                value={manualToken}
-                                onChange={(e) => setManualToken(e.target.value)}
-                              />
-                            </div>
-                            <button
-                              onClick={handleManualTokenSync}
-                              disabled={syncing || !manualToken}
-                              className="w-full bg-sky-600 text-white hover:bg-sky-500 text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                            >
-                              {syncing ? (
-                                <>
-                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                  Đang xử lý...
-                                </>
-                              ) : (
-                                <>
-                                  <RefreshCw className="w-3.5 h-3.5" />
-                                  Đồng bộ bằng Token
-                                </>
-                              )}
-                            </button>
-                            <span className="text-[9px] text-slate-400 block leading-tight">Sử dụng trong trường hợp cơ chế popup xác thực bị trình duyệt chặn hoặc trong môi trường sandbox.</span>
-                          </div>
-                        </div>
-
-                        {/* Danh sách tệp đã đồng bộ */}
-                        <div className="lg:col-span-2 space-y-4 text-left">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-sky-500" /> Tài liệu hiện hữu trong Bộ não ({syncedDocs.length})
-                            </h3>
-                            <button
-                              onClick={loadSyncedDocs}
-                              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
-                              title="Tải lại danh sách"
-                            >
-                              <RefreshCw className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          {syncStatus && (
-                            <div className={`p-3 rounded-xl text-[11px] border ${
-                              syncStatus.isError ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            }`}>
-                              {syncStatus.text}
-                            </div>
-                          )}
-
-                          {syncProgress && (
-                            <div className="p-4 bg-sky-50 border border-sky-100 rounded-2xl space-y-2">
-                              <div className="flex justify-between text-xs font-bold text-sky-800">
-                                <span>Đang xử lý: {syncProgress.currentFileName}</span>
-                                <span>{syncProgress.current}/{syncProgress.total}</span>
-                              </div>
-                              <div className="w-full bg-sky-200/60 h-2 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-sky-600 h-full transition-all duration-300"
-                                  style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden max-h-[450px] overflow-y-auto divide-y divide-slate-100">
-                            {syncedDocs.length === 0 ? (
-                              <div className="p-10 text-center text-slate-400 space-y-2">
-                                <span className="text-3xl block">🧠</span>
-                                <p className="text-xs font-medium">Bộ não trợ lý hiện đang trống.</p>
-                                <p className="text-[10px] text-slate-400">Vui lòng đồng bộ dữ liệu từ thư mục Google Drive để cung cấp kiến thức cho AI.</p>
-                              </div>
-                            ) : (
-                              syncedDocs.map((doc) => (
-                                <div key={doc.id} className="p-4 hover:bg-slate-50/50 transition-all">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="space-y-1">
-                                      <h4 className="text-xs font-bold text-slate-800">{doc.name}</h4>
-                                      <p className="text-[10px] font-mono text-slate-400">Mã tệp: {doc.id} | Định dạng: {doc.mimeType}</p>
-                                      <p className="text-[10px] text-slate-500">Đồng bộ lúc: {new Date(doc.updatedAt).toLocaleString("vi-VN")}</p>
-                                    </div>
-                                    <span className="shrink-0 text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 rounded">
-                                      Đã Đồng Bộ
-                                    </span>
-                                  </div>
-                                  {doc.content && (
-                                    <div className="mt-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-[10px] text-slate-600 font-mono whitespace-pre-wrap max-h-[120px] overflow-y-auto">
-                                      {doc.content.substring(0, 400)}{doc.content.length > 400 ? "..." : ""}
-                                    </div>
-                                  )}
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
                   {activeTab === "partners" && (
                     <motion.div
                       key="partners"
@@ -6946,163 +6693,7 @@ export default function AdminPanel({
                     </motion.div>
                   )}
 
-                  {activeTab === "imageUpload" && (
-                    <motion.div
-                      key="imageUpload"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="space-y-6"
-                    >
-                      <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
-                            <ImagePlus className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h2 className="text-xl font-bold font-sans text-slate-800">Công cụ Upload Ảnh</h2>
-                            <p className="text-sm font-medium text-slate-500 mt-1">Tải ảnh lên Google Drive và lấy liên kết trực tiếp (như up-anh-lay-link)</p>
-                          </div>
-                        </div>
-                        
-                        <div className="max-w-xl mx-auto space-y-6">
-                          {!isDriveConnected ? (
-                            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
-                              <div className="bg-emerald-50 p-4 rounded-full mb-4">
-                                <ImagePlus className="w-10 h-10 text-emerald-500" />
-                              </div>
-                              <h3 className="text-lg font-bold text-slate-800 mb-2">Chưa kết nối Google Drive</h3>
-                              <p className="text-sm text-slate-500 mb-6 max-w-sm">
-                                Bạn cần kết nối tài khoản Google để tải ảnh trực tiếp vào Thư mục Drive chung. 
-                                <br/><span className="text-[10px] text-rose-500 mt-2 block">Lưu ý: Nếu popup bị chặn, hãy nhấn "Mở trong tab mới" ở góc trên màn hình.</span>
-                              </p>
-                              <button 
-                                onClick={handleConnectDrive}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2"
-                              >
-                                <Link2 className="w-5 h-5" />
-                                Kết nối Google Drive
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="border-2 border-dashed border-slate-300 rounded-3xl p-10 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors">
-                              <ImagePlus className="w-12 h-12 text-slate-300 mb-4" />
-                              <p className="text-sm font-semibold text-slate-700 mb-2">Kéo thả ảnh vào đây hoặc</p>
-                              <label className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-6 py-3 rounded-xl transition cursor-pointer shadow-md inline-flex items-center gap-2">
-                                <span>{isUploadingDriveImage ? "Đang tải lên..." : "Chọn ảnh từ máy tính"}</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  disabled={isUploadingDriveImage}
-                                  onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      setIsUploadingDriveImage(true);
-                                      try {
-                                        let token = await getAccessToken();
-                                        if (!token) throw new Error("Vui lòng kết nối lại Google Drive.");
-                                        
-                                        const FOLDER_ID = "1LZQhcPm0WiMd1IiqLxW2MrNl6J9PjhrS";
-                                      const metadata = { name: `${Date.now()}_${file.name}`, parents: [FOLDER_ID] };
-                                      
-                                      let createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                                        method: 'POST',
-                                        headers: {
-                                          'Authorization': `Bearer ${token}`,
-                                          'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify(metadata)
-                                      });
-                                      let createData = await createRes.json();
-                                      
-                                      if (!createData.id && createData.error) {
-                                        console.warn("Falling back to root drive folder", createData.error);
-                                        const fallbackMetadata = { name: `${Date.now()}_${file.name}` };
-                                        createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                                          method: 'POST',
-                                          headers: {
-                                            'Authorization': `Bearer ${token}`,
-                                            'Content-Type': 'application/json'
-                                          },
-                                          body: JSON.stringify(fallbackMetadata)
-                                        });
-                                        createData = await createRes.json();
-                                      }
-                                      
-                                      if (!createData.id) throw new Error(createData.error?.message || "Failed to create file");
-                                      
-                                      const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${createData.id}?uploadType=media`, {
-                                        method: 'PATCH',
-                                        headers: {
-                                          'Authorization': `Bearer ${token}`,
-                                          'Content-Type': file.type
-                                        },
-                                        body: file
-                                      });
-                                      
-                                      if (uploadRes.ok) {
-                                        await fetch(`https://www.googleapis.com/drive/v3/files/${createData.id}/permissions`, {
-                                          method: 'POST',
-                                          headers: {
-                                            'Authorization': `Bearer ${token}`,
-                                            'Content-Type': 'application/json'
-                                          },
-                                          body: JSON.stringify({ role: 'reader', type: 'anyone' })
-                                        });
-                                        
-                                        const directUrl = `https://lh3.googleusercontent.com/d/${createData.id}`;
-                                        setUploadedDriveImageUrl(directUrl);
-                                      } else {
-                                        throw new Error("Upload content failed");
-                                      }
-                                    } catch (err) {
-                                      console.error("Lỗi upload:", err);
-                                      alert("Lỗi tải ảnh: " + (err.message || err));
-                                    } finally {
-                                      setIsUploadingDriveImage(false);
-                                      e.target.value = '';
-                                    }
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
 
-                        )}
-
-                        {uploadedDriveImageUrl && (
-                          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
-                            <h3 className="text-emerald-800 font-bold mb-4 flex items-center gap-2">
-                              <CheckCircle2 className="w-5 h-5" />
-                              Tải ảnh thành công!
-                            </h3>
-                              <div className="aspect-video w-full max-w-sm mx-auto bg-slate-100 rounded-xl overflow-hidden mb-4 border border-emerald-100 flex items-center justify-center relative">
-                                <img src={uploadedDriveImageUrl} alt="Uploaded" className="max-w-full max-h-full object-contain" />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  readOnly
-                                  value={uploadedDriveImageUrl}
-                                  className="flex-1 px-4 py-3 bg-white border border-emerald-200 rounded-xl text-sm font-medium focus:outline-none"
-                                />
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(uploadedDriveImageUrl);
-                                    alert("Đã sao chép đường dẫn!");
-                                  }}
-                                  className="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shrink-0"
-                                >
-                                  Copy Link
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
 
                   {activeTab === "volunteers" && (
                     <motion.div

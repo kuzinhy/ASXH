@@ -200,13 +200,11 @@ export default function DigitalBadgeWallet({ currentUser, onNavigateTab, showToa
       setNewsReads(savedReads);
     };
 
+    handleStorageChange();
     window.addEventListener("storage", handleStorageChange);
-    // Also poll every 3 seconds to catch quick updates inside the same window
-    const interval = setInterval(handleStorageChange, 3000);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
     };
   }, [currentUser]);
 
