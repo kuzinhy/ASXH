@@ -127,8 +127,8 @@ export default function NewsArticleFeed({
         ) : (
           <div className="flex-1 overflow-hidden relative group min-h-[300px]">
             <div 
-              className="flex flex-col gap-4 relative sm:absolute top-0 w-full pr-2 sm:animate-marquee-vertical group-hover:[animation-play-state:paused] overflow-y-auto sm:overflow-y-visible h-full sm:h-auto pb-4 sm:pb-0"
-              style={{ animationDuration: `${Math.max(publishedNews.length * 5, 20)}s` }}
+              className="flex flex-col gap-4 relative sm:absolute top-0 w-full pr-2 sm:animate-marquee-vertical group-hover:[animation-play-state:paused] overflow-y-auto sm:overflow-y-visible h-full sm:h-auto pb-4 sm:pb-0 [will-change:transform]"
+              style={{ animationDuration: `${Math.max(publishedNews.length * 14, 45)}s` }}
             >
               {[...publishedNews, ...publishedNews].map((item, idx) => (
                 <article
@@ -139,15 +139,15 @@ export default function NewsArticleFeed({
                   title="Bấm để xem chi tiết đầy đủ của bản tin này"
                 >
                   {/* News Media Thumbnail */}
-                  <div className="relative w-32 sm:w-36 shrink-0 bg-slate-200 overflow-hidden">
+                  <div className="relative w-28 sm:w-36 shrink-0 bg-slate-200 overflow-hidden rounded-l-2xl">
                     <img
                       src={item.imageUrl || "https://lh3.googleusercontent.com/d/1MT0t2jwh0jomWuJmtMxyT59XTjDHJ2AP"}
                       alt={item.title}
-                      className="w-full h-full object-cover transition-all duration-700"
+                      className="w-full h-full object-cover object-center transition-all duration-700 group-hover:scale-105"
                       referrerPolicy="no-referrer"
                     />
                     {/* Category Overlay Tag */}
-                    <span className="absolute top-2 left-2 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-sm">
+                    <span className="absolute top-2 left-2 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-sm z-10">
                       {item.category}
                     </span>
                   </div>

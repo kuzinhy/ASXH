@@ -4072,6 +4072,7 @@ export default function AdminPanel({
                                       className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-2xl text-xs focus:outline-none transition-all font-light appearance-none"
                                     >
                                       <option value="Tin An Sinh">Tin An Sinh</option>
+                                      <option value="Thư Viện Ảnh An Sinh">Thư Viện Ảnh An Sinh</option>
                                       <option value="Cứu trợ">Cứu trợ</option>
                                       <option value="Ngày thứ bảy văn minh">Ngày thứ bảy văn minh</option>
                                       <option value="Tuyên truyền">Tuyên truyền</option>
@@ -4216,6 +4217,7 @@ export default function AdminPanel({
                             >
                               <option value="All">Tất cả danh mục</option>
                               <option value="Tin An Sinh">Tin An Sinh</option>
+                              <option value="Thư Viện Ảnh An Sinh">Thư Viện Ảnh An Sinh</option>
                               <option value="Hoạt Động Phường">Hoạt Động Phường</option>
                               <option value="Thông Báo Khẩn">Thông Báo Khẩn</option>
                               <option value="Gương Sáng Việc Tốt">Gương Sáng Việc Tốt</option>
@@ -4571,6 +4573,7 @@ export default function AdminPanel({
                                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-250 focus:border-blue-500 focus:bg-white rounded-xl text-xs focus:outline-none transition cursor-pointer"
                                       >
                                         <option value="Tin An Sinh">Tin An Sinh</option>
+                                        <option value="Thư Viện Ảnh An Sinh">Thư Viện Ảnh An Sinh</option>
                                         <option value="Hoạt Động Phường">Hoạt Động Phường</option>
                                         <option value="Thông Báo Khẩn">Thông Báo Khẩn</option>
                                         <option value="Gương Sáng Việc Tốt">Gương Sáng Việc Tốt</option>

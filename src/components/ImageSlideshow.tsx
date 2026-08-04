@@ -23,7 +23,7 @@ import {
   Share2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { UserProfile, SlideshowImage } from "../types";
+import { UserProfile, SlideshowImage, NewsArticle } from "../types";
 import { 
   fetchSlideshowImagesFromFirestore, 
   saveSlideshowImageToFirestore, 
@@ -35,6 +35,7 @@ import { Loader2 } from "lucide-react";
 
 interface ImageSlideshowProps {
   currentUser: UserProfile | null;
+  news?: NewsArticle[];
 }
 
 // Pre-configured community photos from the Google Drive folder
@@ -145,8 +146,30 @@ const DEFAULT_IMAGES: SlideshowImage[] = [
   }
 ];
 
-export default function ImageSlideshow({ currentUser }: ImageSlideshowProps) {
+export default function ImageSlideshow({ currentUser, news = [] }: ImageSlideshowProps) {
   const [images, setImages] = useState<SlideshowImage[]>([]);
+
+  // Convert news articles with category "Thư Viện Ảnh An Sinh" into slideshow images
+  const newsGalleryImages: SlideshowImage[] = React.useMemo(() => {
+    return (news || [])
+      .filter(item => (!item.status || item.status === "published") && (item.category === "Thư Viện Ảnh An Sinh" || item.category === "Thư viện ảnh An sinh"))
+      .map(item => ({
+        id: `news-gallery-${item.id}`,
+        title: item.title,
+        caption: item.body,
+        url: item.imageUrl || "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=400&auto=format&fit=crop&q=60",
+        date: item.date,
+        source: "news",
+        originalUrl: item.originalUrl
+      }));
+  }, [news]);
+
+  // Combined list of all images to display in the slideshow
+  const allDisplayImages = React.useMemo(() => {
+    const existingIds = new Set(images.map(img => img.id));
+    const cleanNews = newsGalleryImages.filter(img => !existingIds.has(img.id));
+    return [...cleanNews, ...images];
+  }, [newsGalleryImages, images]);
   
   // Modals and Interaction states
   const [selectedImage, setSelectedImage] = useState<SlideshowImage | null>(null);
@@ -362,7 +385,7 @@ export default function ImageSlideshow({ currentUser }: ImageSlideshowProps) {
   };
 
   // Helper double list for seamless loop scrolling
-  const doubledImages = [...images, ...images];
+  const doubledImages = [...allDisplayImages, ...allDisplayImages];
 
   return (
     <div id="community-album" className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] lg:h-[560px] h-[500px] flex flex-col relative overflow-hidden">

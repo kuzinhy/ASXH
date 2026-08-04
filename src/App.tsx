@@ -1843,7 +1843,7 @@ const handleDeleteNews = async (id: string) => {
       <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-stretch">
         <div className="lg:col-span-7">
           <ScrollReveal duration={1.0} yOffset={40} className="h-full">
-            <ImageSlideshow currentUser={currentUser} />
+            <ImageSlideshow currentUser={currentUser} news={newsArticles} />
           </ScrollReveal>
         </div>
         <div className="lg:col-span-5 flex flex-col h-[450px] lg:h-full">
