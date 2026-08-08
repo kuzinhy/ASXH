@@ -334,7 +334,7 @@ function RatingInput({ rId, onRatingSubmit }: { rId: string; onRatingSubmit?: (r
   );
 }
 
-export default function ServiceHub({
+function ServiceHub({
   requests,
   campaigns,
   donations,
@@ -4369,6 +4369,8 @@ export default function ServiceHub({
     </section>
   );
 }
+
+export default React.memo(ServiceHub);
 
 interface VolunteerRegFormProps {
   currentUser: UserProfile | null;

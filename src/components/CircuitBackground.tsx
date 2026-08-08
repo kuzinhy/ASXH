@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function CircuitBackground() {
+function CircuitBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-60">
       {/* Subtle tech background gradients */}
@@ -20,4 +20,6 @@ export default function CircuitBackground() {
     </div>
   );
 }
+
+export default React.memo(CircuitBackground);
 

@@ -5,7 +5,7 @@ import { WebConfig } from "../types";
 import OfficialFanpagesBar from "./OfficialFanpagesBar";
 import { DEFAULT_WEB_CONFIG } from "../lib/firebaseSync";
 
-export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
+function Hero({ webConfig }: { webConfig: WebConfig | null }) {
   const config = webConfig || DEFAULT_WEB_CONFIG;
   const [tickerIndex, setTickerIndex] = useState(0);
 
@@ -290,5 +290,7 @@ export default function Hero({ webConfig }: { webConfig: WebConfig | null }) {
     </section>
   );
 }
+
+export default React.memo(Hero);
 
 

@@ -148,7 +148,7 @@ const PARTNERS_COL_2: Partner[] = [
   }
 ];
 
-export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqueeProps) {
+function PartnersMarquee({ officialPartners = [] }: PartnersMarqueeProps) {
   // We double the lists to create a seamless infinite scrolling effect
   const doubledCol1 = [...PARTNERS_COL_1, ...PARTNERS_COL_1];
   const doubledCol2 = [...PARTNERS_COL_2, ...PARTNERS_COL_2];
@@ -206,7 +206,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
 
             {/* Column 1 - Normal Scroll */}
             <div className="flex-1 overflow-hidden h-full">
-              <div className="flex flex-col gap-4 sm:gap-6 animate-marquee-vertical hover:[animation-play-state:paused] transition-all duration-300">
+              <div className="flex flex-col gap-4 sm:gap-6 animate-marquee-vertical gpu-accelerated hover:[animation-play-state:paused] transition-all duration-300">
                 {doubledCol1.map((partner, idx) => {
                   const Icon = partner.icon;
                   return (
@@ -259,7 +259,7 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
 
             {/* Column 2 - Slow Scroll */}
             <div className="flex-1 overflow-hidden h-full hidden sm:block">
-              <div className="flex flex-col gap-4 sm:gap-6 animate-marquee-vertical-slow hover:[animation-play-state:paused] transition-all duration-300">
+              <div className="flex flex-col gap-4 sm:gap-6 animate-marquee-vertical-slow gpu-accelerated hover:[animation-play-state:paused] transition-all duration-300">
                 {doubledCol2.map((partner, idx) => {
                   const Icon = partner.icon;
                   return (
@@ -401,3 +401,5 @@ export default function PartnersMarquee({ officialPartners = [] }: PartnersMarqu
     </section>
   );
 }
+
+export default React.memo(PartnersMarquee);

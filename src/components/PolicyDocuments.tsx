@@ -552,3 +552,5 @@ export const PolicyDocuments: React.FC<PolicyDocumentsProps> = ({ documents }) =
   );
 };
 
+export default React.memo(PolicyDocuments);
+

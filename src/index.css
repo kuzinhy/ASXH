@@ -32,28 +32,28 @@ html {
 
   @keyframes marquee-vertical {
     0% {
-      transform: translateY(0%);
+      transform: translate3d(0, 0%, 0);
     }
     100% {
-      transform: translateY(-50%);
+      transform: translate3d(0, -50%, 0);
     }
   }
 
   @keyframes marquee-horizontal-ltr {
     0% {
-      transform: translateX(-50%);
+      transform: translate3d(-50%, 0, 0);
     }
     100% {
-      transform: translateX(0%);
+      transform: translate3d(0%, 0, 0);
     }
   }
 
   @keyframes marquee-horizontal-rtl {
     0% {
-      transform: translateX(0%);
+      transform: translate3d(0%, 0, 0);
     }
     100% {
-      transform: translateX(-50%);
+      transform: translate3d(-50%, 0, 0);
     }
   }
 }
@@ -146,5 +146,11 @@ html {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  .gpu-accelerated {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 }

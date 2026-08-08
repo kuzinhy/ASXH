@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { NewsArticle } from "../types";
 import { fetchLoveCount, incrementLoveCount } from "../lib/firebaseSync";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 interface HeartParticle {
   id: number;
@@ -62,13 +64,27 @@ const HEART_COLORS = [
 
 const EMOJIS = ["❤️", "💖", "💝", "🌸", "✨", "🙏", "🌻"];
 
-export default function KindnessHearts({ news = [] }: KindnessHeartsProps) {
-  const [loveCount, setLoveCount] = useState(12480);
+function KindnessHearts({ news = [] }: KindnessHeartsProps) {
+  const [loveCount, setLoveCount] = useState(0);
 
   useEffect(() => {
     fetchLoveCount().then(count => {
-      setLoveCount(count);
+      setLoveCount(count === 12480 ? 0 : count);
     });
+
+    const docRef = doc(db, "config", "visitor_stats");
+    const unsub = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (typeof data.loveCount === "number") {
+          setLoveCount(data.loveCount === 12480 ? 0 : data.loveCount);
+        }
+      }
+    }, (err) => {
+      console.warn("Could not listen to love count:", err);
+    });
+
+    return () => unsub();
   }, []);
   const [particles, setParticles] = useState<HeartParticle[]>([]);
   const [activeQuote, setActiveQuote] = useState("");
@@ -523,3 +539,5 @@ export default function KindnessHearts({ news = [] }: KindnessHeartsProps) {
     </>
   );
 }
+
+export default React.memo(KindnessHearts);

@@ -290,7 +290,7 @@ export default function App() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [policyDocuments, setPolicyDocuments] = useState<import('./types').PolicyDocument[]>([]);
   const [officialPartners, setOfficialPartners] = useState<OfficialPartner[]>([]);
-  const [visitorStats, setVisitorStats] = useState<{ totalVisits: number; onlineCount: number }>({ totalVisits: 14205, onlineCount: 18 });
+  const [visitorStats, setVisitorStats] = useState<{ totalVisits: number; onlineCount: number; loveCount?: number }>({ totalVisits: 0, onlineCount: 1, loveCount: 0 });
   const [partyContributions, setPartyContributions] = useState<PartyContribution[]>([]);
   
   // Authentication State
@@ -931,30 +931,32 @@ export default function App() {
     return () => unsubscribeNews();
   }, []);
 
-  // Real-time listener for visitor stats with random online fluctuation
+  // Real-time listener for visitor stats
   useEffect(() => {
     const docRef = doc(db, "config", "visitor_stats");
     
-    let currentOnlineBase = visitorStats.onlineCount || 18;
+    let currentOnlineBase = visitorStats.onlineCount || 1;
     
     const unsub = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        const data = docSnap.data() as { totalVisits: number; onlineCount: number };
-        currentOnlineBase = data.onlineCount || 18;
-        setVisitorStats(prev => ({
-          totalVisits: data.totalVisits || prev.totalVisits,
-          onlineCount: currentOnlineBase
-        }));
+        const data = docSnap.data() as { totalVisits?: number; onlineCount?: number; loveCount?: number };
+        currentOnlineBase = data.onlineCount || 1;
+        let tv = data.totalVisits ?? 0;
+        let lc = data.loveCount ?? 0;
+        if (tv > 10000) tv = 0;
+        if (lc === 12480) lc = 0;
+        setVisitorStats({
+          totalVisits: tv,
+          onlineCount: currentOnlineBase,
+          loveCount: lc
+        });
       }
     }, (err) => {
       console.warn("Could not listen to visitor stats:", err);
     });
 
-    
-
     return () => {
       unsub();
-      
     };
   }, []);
 
@@ -1431,7 +1433,7 @@ const handleDeleteNews = async (id: string) => {
     }
   };
 
-  const handleAdminNavigate = (tab: any) => {
+  const handleAdminNavigate = useCallback((tab: any) => {
     setAdminActiveTab(tab);
     setIsAdminViewActive(true);
     setTimeout(() => {
@@ -1440,7 +1442,23 @@ const handleDeleteNews = async (id: string) => {
         el.scrollIntoView({ behavior: "smooth" });
       }
     }, 100);
-  };
+  }, []);
+
+  const handleAuthClick = useCallback(() => setIsAuthModalOpen(true), []);
+
+  const handleLogoutClick = useCallback(async () => {
+    await signOut(auth);
+    setCurrentUser(null);
+    localStorage.removeItem("phuloi_current_user");
+    sessionStorage.removeItem("phuloi_current_user");
+    localStorage.removeItem("phuloi_remember_me");
+    localStorage.removeItem("phuloi_cached_creds");
+    sessionStorage.removeItem("phuloi_cached_creds");
+  }, []);
+
+  const handleUpdateProfile = useCallback((updatedUser: UserProfile) => {
+    setCurrentUser(updatedUser);
+  }, []);
 
   // Compute stats for Stats component
   const completedRequestsCount = requests.filter(r => r.status === RequestStatus.COMPLETED).length;
@@ -1507,7 +1525,7 @@ const handleDeleteNews = async (id: string) => {
             <div className="hidden md:flex items-center space-x-6 text-xs text-slate-500 border-r border-slate-200 pr-6 mr-2 font-mono">
               <div className="text-center">
                 <span className="block text-slate-500 text-[9px] uppercase tracking-wider">Lượt Truy Cập</span>
-                <span className="text-slate-800 font-bold">{(visitorStats?.totalVisits || 14205).toLocaleString("vi-VN")}</span>
+                <span className="text-slate-800 font-bold">{(visitorStats?.totalVisits || 0).toLocaleString("vi-VN")}</span>
               </div>
               <div className="text-center">
                 <span className="block text-slate-500 text-[9px] uppercase tracking-wider">Hồ Sơ An Sinh</span>
@@ -1515,7 +1533,7 @@ const handleDeleteNews = async (id: string) => {
               </div>
               <div className="text-center">
                 <span className="block text-slate-500 text-[9px] uppercase tracking-wider">Trực Tuyến</span>
-                <span className="text-emerald-400 font-bold">● {visitorStats?.onlineCount || 18}</span>
+                <span className="text-emerald-400 font-bold">● {visitorStats?.onlineCount || 1}</span>
               </div>
             </div>
 
@@ -1589,8 +1607,7 @@ const handleDeleteNews = async (id: string) => {
                   { id: "partners", icon: Award, label: "Đơn vị đồng hành", iconClass: "text-indigo-500" },
                   { id: "forum", icon: MessageSquare, label: "Diễn đàn & Phản ánh", iconClass: "text-indigo-500" },
                   { id: "partyFeedback", icon: Vote, label: "Góp ý xây dựng Đảng", iconClass: "text-red-600" },
-                  { id: "aiPersonality", icon: Sparkles, label: "Cấu hình AI", iconClass: "text-sky-500" },
-                  { id: "gallery", icon: ImagePlus, label: "Quản lý Thư viện Ảnh", iconClass: "text-emerald-500" }
+                  { id: "aiPersonality", icon: Sparkles, label: "Cấu hình AI", iconClass: "text-sky-500" }
                 ].map(tab => {
                   const Icon = tab.icon;
                   const isActive = adminActiveTab === tab.id;
@@ -1790,21 +1807,14 @@ const handleDeleteNews = async (id: string) => {
       {/* 1. Header with Time, secure status, and visitor stats */}
       <Header 
         currentUser={currentUser}
-        onAuthClick={() => setIsAuthModalOpen(true)}
-        onLogoutClick={async () => {
-          await signOut(auth);
-          setCurrentUser(null);
-          localStorage.removeItem("phuloi_current_user");
-          sessionStorage.removeItem("phuloi_current_user");
-          localStorage.removeItem("phuloi_remember_me");
-          localStorage.removeItem("phuloi_cached_creds");
-          sessionStorage.removeItem("phuloi_cached_creds");
-        }}
+        onAuthClick={handleAuthClick}
+        onLogoutClick={handleLogoutClick}
         portalTitle={webConfig?.portalTitle}
         onAdminNavigate={handleAdminNavigate}
-        onUpdateProfile={(updatedUser) => setCurrentUser(updatedUser)}
-        totalVisits={visitorStats?.totalVisits || 14205}
-        onlineCount={visitorStats?.onlineCount || 18}
+        onUpdateProfile={handleUpdateProfile}
+        totalVisits={visitorStats?.totalVisits ?? 0}
+        onlineCount={visitorStats?.onlineCount ?? 1}
+        loveCount={visitorStats?.loveCount ?? 0}
       />
 
       {/* 2. Hero banner */}
@@ -1824,7 +1834,7 @@ const handleDeleteNews = async (id: string) => {
             currentUser={currentUser}
             onSubmitRequest={handleSubmitRequest}
             onSubmitDonation={handleSubmitDonation}
-            onAuthClick={() => setIsAuthModalOpen(true)}
+            onAuthClick={handleAuthClick}
             onUpdateRequest={handleUpdateRequest}
             showToast={showToast}
             news={newsArticles}

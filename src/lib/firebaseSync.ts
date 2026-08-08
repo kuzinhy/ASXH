@@ -16,7 +16,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, auth, storage } from "./firebase";
 import { safeParseDate } from "./dateUtils";
-import { ForumPost, CitizenRequest, Campaign, Donation, JobListing, SupportCategory, RequestStatus, UserProfile, SlideshowImage, WebConfig, NewsArticle, CalendarEvent, Survey, SurveyOption, VolunteerRegistration, OfficialPartner, SystemBadge, PartyContribution, GalleryImage, PolicyDocument } from "../types";
+import { ForumPost, CitizenRequest, Campaign, Donation, JobListing, SupportCategory, RequestStatus, UserProfile, SlideshowImage, WebConfig, NewsArticle, CalendarEvent, Survey, SurveyOption, VolunteerRegistration, OfficialPartner, SystemBadge, PartyContribution, PolicyDocument } from "../types";
 import { MTTQ_REPORT_REQUESTS, MTTQ_REPORT_DONATIONS, MTTQ_REPORT_CAMPAIGNS } from "../constants";
 
 
@@ -697,13 +697,49 @@ export async function saveWebConfig(config: WebConfig): Promise<void> {
 
 
 
+// Reset Visitor & Love Stats to 0
+export async function resetVisitorStatsToZero(): Promise<{ totalVisits: number; onlineCount: number; loveCount: number }> {
+  try {
+    const docRef = doc(db, "config", "visitor_stats");
+    const newStats = { totalVisits: 0, onlineCount: 1, loveCount: 0 };
+    await setDoc(docRef, newStats, { merge: true });
+    
+    const altDocRef = doc(db, "config", "social_stats");
+    await setDoc(altDocRef, { loveCount: 0 }, { merge: true }).catch(() => {});
+    return newStats;
+  } catch (err) {
+    console.warn("Could not reset visitor stats in Firestore:", err);
+    return { totalVisits: 0, onlineCount: 1, loveCount: 0 };
+  }
+}
+
 // Fetch Love Count
 export async function fetchLoveCount(): Promise<number> {
   try {
-    const docRef = doc(db, "config", "social_stats");
+    const docRef = doc(db, "config", "visitor_stats");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return (docSnap.data() as any).loveCount || 12480;
+      const val = (docSnap.data() as any).loveCount;
+      if (typeof val === 'number') {
+        // If it's the old mock value 12480, auto-reset to 0
+        if (val === 12480) {
+          setDoc(docRef, { loveCount: 0 }, { merge: true }).catch(() => {});
+          return 0;
+        }
+        return val;
+      }
+    }
+    const altDocRef = doc(db, "config", "social_stats");
+    const altSnap = await getDoc(altDocRef);
+    if (altSnap.exists()) {
+      const val = (altSnap.data() as any).loveCount;
+      if (typeof val === 'number') {
+        if (val === 12480) {
+          setDoc(altDocRef, { loveCount: 0 }, { merge: true }).catch(() => {});
+          return 0;
+        }
+        return val;
+      }
     }
   } catch (err: any) {
     const errMsg = err?.message || String(err);
@@ -715,19 +751,22 @@ export async function fetchLoveCount(): Promise<number> {
       console.warn("Error fetching love count:", err);
     }
   }
-  return 12480;
+  return 0;
 }
 
 // Increment Love Count
 export async function incrementLoveCount(): Promise<number> {
   try {
-    const docRef = doc(db, "config", "social_stats");
+    const docRef = doc(db, "config", "visitor_stats");
     await setDoc(docRef, { loveCount: increment(1) }, { merge: true });
     
-    // Fetch the new value
+    const altDocRef = doc(db, "config", "social_stats");
+    await setDoc(altDocRef, { loveCount: increment(1) }, { merge: true }).catch(() => {});
+
     const updatedSnap = await getDoc(docRef);
     if (updatedSnap.exists()) {
-      return (updatedSnap.data() as any).loveCount || 12480;
+      const val = (updatedSnap.data() as any).loveCount;
+      return typeof val === 'number' ? val : 0;
     }
   } catch (err: any) {
     const errMsg = err?.message || String(err);
@@ -739,33 +778,64 @@ export async function incrementLoveCount(): Promise<number> {
       console.warn("Error updating love count:", err);
     }
   }
-  return 12480;
+  return 0;
 }
 
 // Increment visitor stats
-export async function incrementVisitCount(): Promise<{ totalVisits: number; onlineCount: number }> {
+export async function incrementVisitCount(): Promise<{ totalVisits: number; onlineCount: number; loveCount?: number }> {
   try {
     const docRef = doc(db, "config", "visitor_stats");
-    // Try to update first. If it fails, maybe the doc doesn't exist.
     try {
-      await updateDoc(docRef, {
-        totalVisits: increment(1)
-      });
-      const updatedSnap = await getDoc(docRef);
-      if (updatedSnap.exists()) {
-        return updatedSnap.data() as { totalVisits: number; onlineCount: number };
+      // First check if existing totalVisits is the old mock number (> 10000)
+      const existingSnap = await getDoc(docRef);
+      let needsReset = false;
+      let currentLove = 0;
+      if (existingSnap.exists()) {
+        const existingData = existingSnap.data();
+        if ((existingData.totalVisits ?? 0) > 10000) {
+          needsReset = true;
+        }
+        if (typeof existingData.loveCount === 'number' && existingData.loveCount !== 12480) {
+          currentLove = existingData.loveCount;
+        }
+      }
+
+      if (needsReset) {
+        // Reset old mock value in Firestore to 1 for this new real visit
+        await setDoc(docRef, {
+          totalVisits: 1,
+          onlineCount: 1,
+          loveCount: currentLove
+        }, { merge: true });
+        return { totalVisits: 1, onlineCount: 1, loveCount: currentLove };
+      } else {
+        // Increment normally in Firestore
+        await setDoc(docRef, {
+          totalVisits: increment(1)
+        }, { merge: true });
+
+        const updatedSnap = await getDoc(docRef);
+        if (updatedSnap.exists()) {
+          const data = updatedSnap.data();
+          const tv = data.totalVisits ?? 1;
+          let lc = data.loveCount ?? 0;
+          if (lc === 12480) lc = 0;
+          return {
+            totalVisits: tv,
+            onlineCount: data.onlineCount || 1,
+            loveCount: lc
+          };
+        }
       }
     } catch (updateErr) {
-      // If update fails because document doesn't exist, try to set it (only if admin)
       if (String(updateErr).includes("not-found")) {
-        const initialStats = { totalVisits: 14205, onlineCount: 18 };
-        // We only try to set if we have permission.
+        const initialStats = { totalVisits: 1, onlineCount: 1, loveCount: 0 };
         await setDoc(docRef, initialStats);
         return initialStats;
       }
       throw updateErr;
     }
-    return { totalVisits: 14205, onlineCount: 18 };
+    return { totalVisits: 1, onlineCount: 1, loveCount: 0 };
   } catch (err) {
     if (String(err).includes("offline")) { 
       console.warn("Firestore Offline: visitor_stats update skipped."); 
@@ -774,24 +844,27 @@ export async function incrementVisitCount(): Promise<{ totalVisits: number; onli
     } else { 
       console.error("Error updating visitor stats:", err); 
     }
-    return { totalVisits: 14205, onlineCount: 18 };
+    return { totalVisits: 1, onlineCount: 1, loveCount: 0 };
   }
 }
 
 // Fetch visitor stats
-export async function fetchVisitorStats(): Promise<{ totalVisits: number; onlineCount: number }> {
-  const isNewSession = !sessionStorage.getItem('phuloi_visited');
-  if (isNewSession) {
-    sessionStorage.setItem('phuloi_visited', '1');
-    return incrementVisitCount();
-  }
+export async function fetchVisitorStats(): Promise<{ totalVisits: number; onlineCount: number; loveCount?: number }> {
   try {
     const docRef = doc(db, "config", "visitor_stats");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return docSnap.data() as { totalVisits: number; onlineCount: number };
+      const data = docSnap.data();
+      let tv = data.totalVisits ?? 0;
+      let lc = data.loveCount ?? 0;
+      if (tv > 10000) tv = 0;
+      if (lc === 12480) lc = 0;
+      return {
+        totalVisits: tv,
+        onlineCount: data.onlineCount || 1,
+        loveCount: lc
+      };
     } else {
-      // If doc doesn't exist, incrementVisitCount will try to create it
       return incrementVisitCount();
     }
   } catch (err) {
@@ -802,7 +875,7 @@ export async function fetchVisitorStats(): Promise<{ totalVisits: number; online
     } else { 
       console.error("Error fetching visitor stats:", err); 
     }
-    return { totalVisits: 14205, onlineCount: 18 };
+    return { totalVisits: 0, onlineCount: 1, loveCount: 0 };
   }
 }
 
@@ -1298,41 +1371,6 @@ export async function deleteForumPostFromFirestore(id: string): Promise<void> {
     await deleteDoc(docRef);
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, "forum_posts");
-    throw err;
-  }
-}
-
-export async function fetchGalleryImagesFromFirestore(): Promise<GalleryImage[]> {
-  try {
-    const colRef = collection(db, "community_gallery");
-    const q = query(colRef, orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    const data: GalleryImage[] = [];
-    snapshot.forEach((docSnap) => {
-      data.push({ id: docSnap.id, ...docSnap.data() } as GalleryImage);
-    });
-    return data;
-  } catch (err) {
-    handleFirestoreError(err, OperationType.GET, "community_gallery");
-    return [];
-  }
-}
-
-export async function saveGalleryImageToFirestore(image: GalleryImage): Promise<void> {
-  try {
-    const docRef = doc(db, "community_gallery", image.id);
-    await setDoc(docRef, image);
-  } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `community_gallery/${image.id}`);
-    throw err;
-  }
-}
-
-export async function deleteGalleryImageFromFirestore(id: string): Promise<void> {
-  try {
-    await deleteDoc(doc(db, "community_gallery", id));
-  } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `community_gallery/${id}`);
     throw err;
   }
 }

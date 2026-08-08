@@ -146,7 +146,7 @@ const DEFAULT_IMAGES: SlideshowImage[] = [
   }
 ];
 
-export default function ImageSlideshow({ currentUser, news = [] }: ImageSlideshowProps) {
+function ImageSlideshow({ currentUser, news = [] }: ImageSlideshowProps) {
   const [images, setImages] = useState<SlideshowImage[]>([]);
 
   // Convert news articles with category "Thư Viện Ảnh An Sinh" into slideshow images
@@ -842,3 +842,5 @@ export default function ImageSlideshow({ currentUser, news = [] }: ImageSlidesho
     </div>
   );
 }
+
+export default React.memo(ImageSlideshow);

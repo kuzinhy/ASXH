@@ -31,7 +31,7 @@ interface ContactMapProps {
   requests?: CitizenRequest[];
 }
 
-export default function ContactMap({ requests = [] }: ContactMapProps) {
+function ContactMap({ requests = [] }: ContactMapProps) {
   const [selectedKPId, setSelectedKPId] = useState<number | null>(null);
 
   const selectedQuarter = QUARTERS_LIST.find(q => q.id === selectedKPId);
@@ -250,4 +250,6 @@ export default function ContactMap({ requests = [] }: ContactMapProps) {
     </section>
   );
 }
+
+export default React.memo(ContactMap);
 

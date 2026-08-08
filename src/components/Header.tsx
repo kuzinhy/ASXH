@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ShieldCheck, Clock, Menu, X, Landmark, Activity, LogIn, LogOut, User,
-  ChevronDown, ChevronUp, Users, Settings, Gift, Briefcase, FileText, Globe, HeartHandshake, Eye
+  ChevronDown, ChevronUp, Users, Settings, Gift, Briefcase, FileText, Globe, HeartHandshake, Eye, Heart
 } from "lucide-react";
 import { UserProfile } from "../types";
 import { getUserRank } from "../utils/rank";
@@ -18,6 +18,7 @@ interface HeaderProps {
   onAdminNavigate?: (tab: string) => void;
   totalVisits?: number;
   onlineCount?: number;
+  loveCount?: number;
 }
 
 
@@ -41,7 +42,7 @@ const LiveClock = () => {
   );
 };
 
-export default function Header({ 
+function Header({ 
   currentUser, 
   onAuthClick, 
   onLogoutClick, 
@@ -49,7 +50,8 @@ export default function Header({
   onAdminNavigate, 
   onUpdateProfile,
   totalVisits,
-  onlineCount
+  onlineCount,
+  loveCount
 }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -108,9 +110,17 @@ export default function Header({
           
           {onlineCount !== undefined && (
             <div className="flex items-center space-x-1.5 text-emerald-400 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Trực tuyến:</span>
               <span className="font-bold font-mono text-emerald-300 bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/30">{onlineCount.toLocaleString("vi-VN")}</span>
+            </div>
+          )}
+
+          {loveCount !== undefined && (
+            <div className="flex items-center space-x-1.5 text-rose-300 font-semibold">
+              <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-500/40" />
+              <span>Gửi yêu thương:</span>
+              <span className="font-bold font-mono text-rose-200 bg-rose-950/50 px-2 py-0.5 rounded-lg border border-rose-500/30">{loveCount.toLocaleString("vi-VN")}</span>
             </div>
           )}
           
@@ -471,3 +481,5 @@ export default function Header({
     </>
   );
 }
+
+export default React.memo(Header);

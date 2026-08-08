@@ -6,7 +6,7 @@
 import React from "react";
 import { Landmark, CheckCircle, HeartHandshake } from "lucide-react";
 
-export default function Footer() {
+function Footer() {
   return (
     <footer className="bg-gradient-to-b from-slate-950 to-blue-950 text-slate-300 border-t border-blue-900/40 py-16 px-6 shrink-0 relative z-10 font-sans overflow-hidden" id="portal-footer">
       {/* Modern blue/cyan bleeding light glow effects */}
@@ -110,3 +110,5 @@ export default function Footer() {
     </footer>
   );
 }
+
+export default React.memo(Footer);

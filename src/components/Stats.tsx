@@ -158,8 +158,8 @@ export default function Stats({
   completedRequestsCount,
   totalDonationAmount,
   donorsCount,
-  totalVisits = 14205,
-  onlineCount = 18,
+  totalVisits = 0,
+  onlineCount = 1,
   facebookNews = [],
   currentUser
 }: StatsProps) {

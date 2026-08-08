@@ -10,14 +10,14 @@ import { ShieldCheck, ShieldAlert, Users, Settings, Sliders, Activity, ChevronDo
   MessageSquare, Copy, ExternalLink, Send, Search, Archive, Eye, Filter,
   Vote, Edit3, Sparkles, ImagePlus, HeartHandshake, UserCheck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { UserProfile, WebConfig, Campaign, JobListing, CitizenRequest, SupportCategory, RequestStatus, NewsArticle, OfficialPartner, SystemBadge, UserBadgeInfo, PartyContribution, CalendarEvent, VolunteerRegistration, GalleryImage } from "../types";
+import { UserProfile, WebConfig, Campaign, JobListing, CitizenRequest, SupportCategory, RequestStatus, NewsArticle, OfficialPartner, SystemBadge, UserBadgeInfo, PartyContribution, CalendarEvent, VolunteerRegistration } from "../types";
 import AdminForumPanel from "./AdminForumPanel";
 import ProfileModal from "./ProfileModal";
 import PushNotificationCenter from "./PushNotificationCenter";
 import { RequestStatusBadge } from "./ServiceHub";
 import ConfirmDialog from "./ConfirmDialog";
 import { QUARTERS_LIST } from "../constants";
-import { fetchAllUserProfiles, updateUserProfileInFirestore, fetchWebConfig, saveWebConfig, DEFAULT_WEB_CONFIG, saveCampaignToFirestore, deleteCampaignFromFirestore, saveJobToFirestore, deleteJobFromFirestore, updateRequestInFirestore, fetchSystemBadges, saveSystemBadge, deleteSystemBadge, OperationType, saveEventToFirestore, deleteEventFromFirestore, savePolicyDocumentToFirestore, deletePolicyDocumentFromFirestore, fetchVolunteerRegistrationsFromFirestore, updateVolunteerRegistrationStatusInFirestore, fetchGalleryImagesFromFirestore, saveGalleryImageToFirestore, deleteGalleryImageFromFirestore } from "../lib/firebaseSync";
+import { fetchAllUserProfiles, updateUserProfileInFirestore, fetchWebConfig, saveWebConfig, DEFAULT_WEB_CONFIG, saveCampaignToFirestore, deleteCampaignFromFirestore, saveJobToFirestore, deleteJobFromFirestore, updateRequestInFirestore, fetchSystemBadges, saveSystemBadge, deleteSystemBadge, OperationType, saveEventToFirestore, deleteEventFromFirestore, savePolicyDocumentToFirestore, deletePolicyDocumentFromFirestore, fetchVolunteerRegistrationsFromFirestore, updateVolunteerRegistrationStatusInFirestore } from "../lib/firebaseSync";
 import { googleSignIn, getAccessToken } from "../lib/googleAuth";
 import { sendSmsNotification, sendEmailNotification } from "../lib/email";
 import { auth } from "../lib/firebase";
@@ -62,7 +62,7 @@ interface AdminPanelProps {
   onUpdatePartyContribution?: (id: string, updates: Partial<PartyContribution>) => Promise<void>;
 }
 
-type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers" | "gallery";
+type AdminTab = "roles" | "policies" | "config" | "campaigns" | "jobs" | "requests" | "notifications" | "news" | "events" | "analytics" | "partners" | "partyFeedback" | "aiPersonality" | "volunteers";
 
 
 interface ActivityLog {
@@ -234,10 +234,6 @@ export default function AdminPanel({
 
   // Local copies for editing
   const [campaignsList, setCampaignsList] = useState<Campaign[]>(allCampaigns);
-  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
-  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-  const [isDriveConnected, setIsDriveConnected] = useState(!!sessionStorage.getItem('google_access_token'));
-  const [gallerySearchQuery, setGallerySearchQuery] = useState("");
   const [jobsList, setJobsList] = useState<JobListing[]>(allJobs);
   const [requestsList, setRequestsList] = useState<CitizenRequest[]>(allRequests);
 
@@ -800,13 +796,6 @@ export default function AdminPanel({
         console.warn("Could not fetch config:", e);
       }
       
-      try {
-        const galleryRes = await fetchGalleryImagesFromFirestore();
-        setGalleryImages(galleryRes);
-      } catch (e) {
-        console.error("Lỗi tải thư viện ảnh:", e);
-      }
-      
       setLoading(false);
     };
 
@@ -1165,85 +1154,6 @@ export default function AdminPanel({
       showFeedback("Lỗi xóa tin việc làm.", true);
     }
     });
-  };
-
-  const handleDeleteGalleryImage = (id: string) => {
-    showConfirm("Xóa ảnh thư viện", "Bạn có chắc chắn muốn xóa ảnh này khỏi thư viện cộng đồng không?", async () => {
-      try {
-        await deleteGalleryImageFromFirestore(id);
-        setGalleryImages(prev => prev.filter(img => img.id !== id));
-        addActivityLog("Quản lý Thư viện", `Đã xóa ảnh mã số [${id}] khỏi Thư viện cộng đồng`, "warning");
-        showFeedback("🗑️ Đã xóa ảnh thành công!");
-      } catch (e) {
-        console.error(e);
-        showFeedback("Lỗi khi xóa ảnh.", true);
-      }
-    });
-  };
-
-  const handleConnectDrive = async () => {
-    try {
-      // Direct call to reduce popup blocking risk
-      const authResult = await googleSignIn();
-      if (authResult?.accessToken) {
-        setIsDriveConnected(true);
-        showFeedback("✅ Đã kết nối Google Drive thành công!");
-      }
-    } catch (e) {
-      console.error("Drive Auth Error:", e);
-      if (String(e).includes("popup-blocked") || String(e).includes("cancelled-by-user")) {
-        showFeedback("❌ Cửa sổ xác thực bị chặn hoặc bị đóng. Nếu vẫn lỗi, hãy nhấn 'Mở trong tab mới' (nút ở góc trên bên phải) và thử lại.", true);
-      } else if (String(e).includes("api-key-not-valid") || String(e).includes("invalid-api-key")) {
-        showFeedback("❌ Lỗi cấu hình Firebase: API Key không hợp lệ. Vui lòng thiết lập lại Firebase.", true);
-      } else {
-        showFeedback("❌ Lỗi kết nối Drive: " + (e.message || "Vui lòng thử lại"), true);
-      }
-    }
-  };
-
-  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingGallery(true);
-    try {
-      let token = await getAccessToken();
-      if (!token) {
-        throw new Error("Vui lòng nhấn 'Kết nối Google Drive' trước khi tải ảnh.");
-      }
-      
-      // Use the specific folder ID shared by the user
-      const COMMUNITY_FOLDER_ID = "1YhliVml5OEHZWJ_Od9w9-KFVKXmLwxkJ";
-      
-      showFeedback("🔄 Đang tải ảnh lên Google Drive...");
-      const driveFileId = await uploadFileToDrive(token, file, COMMUNITY_FOLDER_ID);
-      
-      if (!driveFileId) throw new Error("Failed to upload to Drive");
-
-      const directUrl = `https://lh3.googleusercontent.com/d/${driveFileId}`;
-      
-      const newImage: GalleryImage = {
-        id: driveFileId,
-        url: directUrl,
-        title: file.name.split('.')[0] || "Ảnh cộng đồng",
-        description: `Ảnh được tải lên bởi ${currentUser?.fullName || "Quản trị viên"}`,
-        authorName: currentUser?.fullName || "Quản trị viên",
-        createdAt: new Date().toISOString(),
-        authorId: currentUser?.uid
-      };
-
-      await saveGalleryImageToFirestore(newImage);
-      setGalleryImages(prev => [newImage, ...prev]);
-      
-      addActivityLog("Quản lý Thư viện", `Đã tải lên ảnh mới: "${newImage.title}" vào Thư viện cộng đồng`, "success");
-      showFeedback("✅ Đã tải ảnh lên Thư viện thành công!");
-    } catch (e) {
-      console.error("Lỗi upload gallery:", e);
-      showFeedback("❌ Lỗi tải ảnh: " + (e.message || "Không xác định"), true);
-    } finally {
-      setIsUploadingGallery(false);
-      if (e.target) e.target.value = "";
-    }
   };
 
   // 5. Advanced request management status updating
@@ -6549,148 +6459,6 @@ export default function AdminPanel({
                               </p>
                             </button>
                           </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                
-                  {activeTab === "gallery" && (
-                    <motion.div
-                      key="gallery"
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -15 }}
-                      transition={{ duration: 0.3 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-5 gap-4">
-                        <div>
-                          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <span className="text-emerald-500">🖼️</span> Quản Lý Thư Viện Ảnh Cộng Đồng
-                          </h2>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Quản lý hình ảnh trong thư mục Drive chung và hiển thị lên Thư viện ảnh ở trang chủ.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {!isDriveConnected ? (
-                            <div className="flex flex-col items-end gap-1">
-                              <button 
-                                onClick={handleConnectDrive}
-                                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
-                              >
-                                <Link2 className="w-4 h-4" />
-                                <span>Kết nối Google Drive</span>
-                              </button>
-                              <span className="text-[9px] text-rose-500 font-medium">Lỗi Popup? Nhấn "Mở trong tab mới"</span>
-                            </div>
-                          ) : (
-                            <>
-                              <a 
-                                href="https://drive.google.com/drive/folders/1YhliVml5OEHZWJ_Od9w9-KFVKXmLwxkJ" 
-                                target="_blank" 
-                                rel="noreferrer" 
-                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Mở Folder Drive
-                              </a>
-                              <label className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer">
-                                {isUploadingGallery ? (
-                                  <RefreshCw className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Plus className="w-4 h-4" />
-                                )}
-                                <span>{isUploadingGallery ? "Đang tải lên..." : "Tải Ảnh Mới Lên Drive"}</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  disabled={isUploadingGallery}
-                                  onChange={handleGalleryUpload}
-                                />
-                              </label>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs text-left">
-                        <div className="flex items-center justify-between mb-6 gap-4">
-                          <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                            <input
-                              type="text"
-                              value={gallerySearchQuery}
-                              onChange={(e) => setGallerySearchQuery(e.target.value)}
-                              placeholder="Tìm kiếm theo tên ảnh, người đăng..."
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-700 focus:border-emerald-500 outline-none transition-colors"
-                            />
-                          </div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                            Tổng cộng: {galleryImages.length} ảnh
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                          {galleryImages
-                            .filter(img => 
-                              img.title.toLowerCase().includes(gallerySearchQuery.toLowerCase()) ||
-                              img.authorName.toLowerCase().includes(gallerySearchQuery.toLowerCase())
-                            )
-                            .map((img) => (
-                              <div key={img.id} className="group bg-slate-50 border border-slate-200/60 rounded-2xl overflow-hidden hover:shadow-lg hover:border-emerald-200 transition-all">
-                                <div className="aspect-square w-full relative bg-slate-200 overflow-hidden">
-                                  <img 
-                                    src={img.url} 
-                                    alt={img.title} 
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                    loading="lazy"
-                                  />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                    <button 
-                                      onClick={() => handleDeleteGalleryImage(img.id)}
-                                      className="p-2.5 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition shadow-lg"
-                                      title="Xóa ảnh"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                    <a 
-                                      href={img.url} 
-                                      target="_blank" 
-                                      rel="noreferrer"
-                                      className="p-2.5 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition shadow-lg"
-                                      title="Xem ảnh gốc"
-                                    >
-                                      <ExternalLink className="w-4 h-4" />
-                                    </a>
-                                  </div>
-                                </div>
-                                <div className="p-4 space-y-2">
-                                  <h4 className="text-xs font-bold text-slate-800 line-clamp-1" title={img.title}>
-                                    {img.title}
-                                  </h4>
-                                  <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                                      <Users className="w-3 h-3" /> {img.authorName}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                      {new Date(img.createdAt).toLocaleDateString("vi-VN")}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-
-                          {galleryImages.length === 0 && (
-                            <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 space-y-4">
-                              <ImagePlus className="w-16 h-16 opacity-20" />
-                              <div className="text-center">
-                                <p className="font-bold text-sm">Thư viện ảnh đang trống</p>
-                                <p className="text-xs">Hãy tải những hình ảnh hoạt động cộng đồng đầu tiên lên Drive.</p>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </motion.div>
