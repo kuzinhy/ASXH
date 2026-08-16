@@ -18,7 +18,7 @@ interface NewsArticleFeedProps {
   showToast?: (title: string, message: string, type: "success" | "info" | "warning" | "error") => void;
 }
 
-export default function NewsArticleFeed({
+function NewsArticleFeed({
   news,
   currentUser,
   bookmarkedNewsIds = [],
@@ -143,6 +143,8 @@ export default function NewsArticleFeed({
                     <img
                       src={item.imageUrl || "https://lh3.googleusercontent.com/d/1MT0t2jwh0jomWuJmtMxyT59XTjDHJ2AP"}
                       alt={item.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover object-center transition-all duration-700 group-hover:scale-105"
                       referrerPolicy="no-referrer"
                     />
@@ -311,3 +313,5 @@ export default function NewsArticleFeed({
     </div>
   );
 }
+
+export default React.memo(NewsArticleFeed);

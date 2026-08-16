@@ -175,7 +175,16 @@ function Header({
 
           <a href="#services" className="text-slate-600 hover:text-primary-600 hover:underline decoration-primary-500/30 underline-offset-8 decoration-2 transition-all duration-300 whitespace-nowrap">Dịch vụ trực tuyến</a>
           <a href="#facebook-news-feed" className="text-slate-600 hover:text-primary-600 hover:underline decoration-primary-500/30 underline-offset-8 decoration-2 transition-all duration-300 whitespace-nowrap">Tin tức Facebook</a>
-          <a href="#ai-assistant" className="text-slate-600 hover:text-primary-600 hover:underline decoration-primary-500/30 underline-offset-8 decoration-2 transition-all duration-300 whitespace-nowrap">Trợ lý ảo AI</a>
+          <a 
+            href="#ai-assistant" 
+            onClick={(e) => {
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent('open-ai-chat'));
+            }}
+            className="text-slate-600 hover:text-primary-600 hover:underline decoration-primary-500/30 underline-offset-8 decoration-2 transition-all duration-300 whitespace-nowrap cursor-pointer"
+          >
+            Trợ lý ảo AI
+          </a>
           
           {/* Auth State Button */}
           {currentUser ? (
@@ -442,8 +451,12 @@ function Header({
           </a>
           <a 
             href="#ai-assistant" 
-            className="block text-xs uppercase tracking-wider text-slate-500 hover:text-slate-800 font-bold py-2.5 border-b border-slate-100"
-            onClick={() => setMobileMenuOpen(false)}
+            className="block text-xs uppercase tracking-wider text-slate-500 hover:text-slate-800 font-bold py-2.5 border-b border-slate-100 cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              setMobileMenuOpen(false);
+              window.dispatchEvent(new CustomEvent('open-ai-chat'));
+            }}
           >
             Trợ lý ảo AI
           </a>

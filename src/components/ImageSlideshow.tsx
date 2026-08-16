@@ -580,7 +580,7 @@ function ImageSlideshow({ currentUser, news = [] }: ImageSlideshowProps) {
           <div 
             className={`flex gap-4 ${
               isPlaying 
-                ? "animate-marquee-horizontal-ltr hover:[animation-play-state:paused]" 
+                ? "animate-marquee-horizontal-ltr gpu-accelerated hover:[animation-play-state:paused]" 
                 : ""
             } transition-all duration-300`}
             style={{ width: "max-content" }}
@@ -596,6 +596,8 @@ function ImageSlideshow({ currentUser, news = [] }: ImageSlideshowProps) {
                   <img 
                     src={img.url} 
                     alt={img.title}
+                    loading="lazy"
+                    decoding="async"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                     onError={(e) => {

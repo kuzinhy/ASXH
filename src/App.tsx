@@ -8,6 +8,7 @@ import ImageSlideshow from "./components/ImageSlideshow";
 import ContactMap from "./components/ContactMap";
 import Footer from "./components/Footer";
 import KindnessHearts from "./components/KindnessHearts";
+import FloatingChat from "./components/FloatingChat";
 import AuthModal from "./components/AuthModal";
 import ScrollReveal from "./components/ScrollReveal";
 import NewsFeed from "./components/NewsFeed";
@@ -1871,33 +1872,38 @@ const handleDeleteNews = async (id: string) => {
       </div>
 
       {/* 5.5 Event Calendar */}
-      <div className="max-w-7xl mx-auto px-4 pb-8 w-full">
-        <ScrollReveal duration={1.0} yOffset={40}>
+      <div className="max-w-7xl mx-auto px-4 pb-8 w-full content-visibility-auto">
+        <ScrollReveal duration={0.6} yOffset={25}>
           <EventCalendar events={events} />
         </ScrollReveal>
       </div>
 
       {/* 5.6 Policy Documents */}
-      <div id="policy-documents" className="max-w-7xl mx-auto px-4 pb-8 w-full">
-        <ScrollReveal duration={1.0} yOffset={40}>
+      <div id="policy-documents" className="max-w-7xl mx-auto px-4 pb-8 w-full content-visibility-auto">
+        <ScrollReveal duration={0.6} yOffset={25}>
           <PolicyDocuments documents={policyDocuments} />
         </ScrollReveal>
       </div>
 
       {/* 7. Typical Partners Marquee (Đặc tả các đối tác đồng hành) */}
-      <ScrollReveal duration={1.0} yOffset={45}>
-        <PartnersMarquee officialPartners={officialPartners} />
-      </ScrollReveal>
+      <div className="content-visibility-auto">
+        <ScrollReveal duration={0.6} yOffset={25}>
+          <PartnersMarquee officialPartners={officialPartners} />
+        </ScrollReveal>
+      </div>
 
       {/* 8. Administrative contacts & Local quarters details */}
-      <ScrollReveal duration={1.0} yOffset={45}>
-        <ContactMap requests={requests} />
-      </ScrollReveal>
+      <div className="content-visibility-auto">
+        <ScrollReveal duration={0.6} yOffset={25}>
+          <ContactMap requests={requests} />
+        </ScrollReveal>
+      </div>
 
       {/* 10. Government-portal styled footer */}
       <Footer />
 
-      {/* 11. Interactive floating hearts (Emotional Connection Widget) */}
+      {/* 11. Interactive floating hearts & Virtual Assistant floating buttons */}
+      <FloatingChat />
       <KindnessHearts news={newsArticles} />
 
       {/* Real-time automated Toast Notifications Container */}

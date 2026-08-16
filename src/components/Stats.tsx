@@ -153,7 +153,7 @@ const OUTSTANDING_RESULTS: Record<"mttq" | "youth" | "women" | "veterans" | "uni
   ]
 };
 
-export default function Stats({
+function Stats({
   requestsCount,
   completedRequestsCount,
   totalDonationAmount,
@@ -866,5 +866,7 @@ export default function Stats({
     </section>
   );
 }
+
+export default React.memo(Stats);
 
 

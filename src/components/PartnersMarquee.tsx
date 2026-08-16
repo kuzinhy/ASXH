@@ -333,7 +333,7 @@ function PartnersMarquee({ officialPartners = [] }: PartnersMarqueeProps) {
             <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#faf5ff] via-[#faf5ff]/80 to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#faf5ff] via-[#faf5ff]/80 to-transparent z-10 pointer-events-none" />
 
-            <div className="flex gap-6 animate-marquee-horizontal-rtl hover:[animation-play-state:paused] w-max">
+            <div className="flex gap-6 animate-marquee-horizontal-rtl gpu-accelerated hover:[animation-play-state:paused] w-max">
               {(() => {
                 const baseList = officialPartners && officialPartners.length > 0 ? officialPartners : [
                   {
@@ -377,6 +377,8 @@ function PartnersMarquee({ officialPartners = [] }: PartnersMarqueeProps) {
                       <img 
                         src={partner.imageUrl} 
                         alt={partner.name} 
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-contain"
                         referrerPolicy="no-referrer"
                         onError={(e) => { (e.target as any).src = "https://lh3.googleusercontent.com/d/1VdHot14lAHtlOODpodU5W1OAHIKuCwVE"; }}

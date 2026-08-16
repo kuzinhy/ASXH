@@ -33,7 +33,7 @@ export const OFFICIAL_FANPAGES = [
   }
 ];
 
-export default function OfficialFanpagesBar() {
+function OfficialFanpagesBar() {
   return (
     <div className="w-full">
       <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 p-3 sm:p-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col items-center gap-3">
@@ -52,6 +52,8 @@ export default function OfficialFanpagesBar() {
                 <img
                   src={fanpage.icon}
                   alt={fanpage.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                   referrerPolicy="no-referrer"
                 />
@@ -66,3 +68,5 @@ export default function OfficialFanpagesBar() {
     </div>
   );
 }
+
+export default React.memo(OfficialFanpagesBar);

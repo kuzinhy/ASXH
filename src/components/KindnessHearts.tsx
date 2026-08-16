@@ -210,7 +210,7 @@ function KindnessHearts({ news = [] }: KindnessHeartsProps) {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end pointer-events-none select-none">
+      <div className="fixed bottom-6 left-6 z-40 flex flex-col items-start pointer-events-none select-none">
         
         {/* Particles layer */}
         <div className="relative w-full h-0 overflow-visible">
@@ -229,7 +229,7 @@ function KindnessHearts({ news = [] }: KindnessHeartsProps) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 2.5, ease: "easeOut" }}
                 onAnimationComplete={() => removeParticle(p.id)}
-                className="absolute bottom-0 right-10 flex flex-col items-center shrink-0 pointer-events-none"
+                className="absolute bottom-0 left-10 flex flex-col items-center shrink-0 pointer-events-none"
               >
                 {/* Particle Emoji/Heart */}
                 <span className={`text-2xl drop-shadow-md filter`}>

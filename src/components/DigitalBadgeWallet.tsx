@@ -137,7 +137,7 @@ interface DigitalBadgeWalletProps {
   showToast?: (title: string, msg: string, type: "success" | "info" | "warning" | "error") => void;
 }
 
-export default function DigitalBadgeWallet({ currentUser, onNavigateTab, showToast }: DigitalBadgeWalletProps) {
+function DigitalBadgeWallet({ currentUser, onNavigateTab, showToast }: DigitalBadgeWalletProps) {
   const [visits, setVisits] = useState(1);
   const [newsReads, setNewsReads] = useState(0);
   const [eventsRegistered, setEventsRegistered] = useState(0);
@@ -733,3 +733,5 @@ export default function DigitalBadgeWallet({ currentUser, onNavigateTab, showToa
     </div>
   );
 }
+
+export default React.memo(DigitalBadgeWallet);

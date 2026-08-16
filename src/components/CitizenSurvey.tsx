@@ -95,7 +95,7 @@ export const SEED_SURVEYS: Survey[] = [
 
 const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
-export default function CitizenSurvey({ currentUser, onOpenAuthModal, showToast, resultsOnly = false }: CitizenSurveyProps) {
+function CitizenSurvey({ currentUser, onOpenAuthModal, showToast, resultsOnly = false }: CitizenSurveyProps) {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("Tất cả");
@@ -989,3 +989,5 @@ export default function CitizenSurvey({ currentUser, onOpenAuthModal, showToast,
     </div>
   );
 }
+
+export default React.memo(CitizenSurvey);

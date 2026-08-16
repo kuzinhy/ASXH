@@ -25,7 +25,7 @@ import { ChatMessage } from "../types";
 import { db } from "../lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
-export default function FloatingChat() {
+function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"ai" | "officer" | "hotline">("ai");
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -80,6 +80,24 @@ export default function FloatingChat() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Listen for external custom events (e.g. from Hero or Header buttons) to open AI chat window
+  useEffect(() => {
+    const handleOpenChat = (e: Event) => {
+      setIsOpen(true);
+      setShowWelcomeTip(false);
+      const customEv = e as CustomEvent;
+      if (customEv.detail?.prompt) {
+        setInput(customEv.detail.prompt);
+      }
+    };
+    window.addEventListener('open-ai-chat', handleOpenChat);
+    window.addEventListener('ai-ask', handleOpenChat);
+    return () => {
+      window.removeEventListener('open-ai-chat', handleOpenChat);
+      window.removeEventListener('ai-ask', handleOpenChat);
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -247,7 +265,7 @@ export default function FloatingChat() {
   return (
     <>
       {/* Floating Buttons Group on Bottom Right */}
-      <div className="fixed bottom-24 right-6 z-40 flex flex-col items-end space-y-4">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end space-y-3 pointer-events-none" id="ai-assistant">
         
         {/* Welcome message balloon above the chat button */}
         <AnimatePresence>
@@ -266,7 +284,7 @@ export default function FloatingChat() {
                 <span>Cần trợ giúp trực tuyến?</span>
               </div>
               <p className="text-slate-200 leading-relaxed font-light font-sans">
-                Trực ban Ủy ban MTTQ Phường Phú Lợi sẵn sàng giải đáp thắc mắc của bà con 24/7!
+                Trợ lý AI Ủy ban MTTQ Phường Phú Lợi sẵn sàng giải đáp thắc mắc của bà con 24/7!
               </p>
               <div className="flex justify-between items-center pt-1">
                 <button 
@@ -286,7 +304,7 @@ export default function FloatingChat() {
           )}
         </AnimatePresence>
 
-        {/* Floating Chat Circle Button */}
+        {/* Sticky Floating AI Assistant Pill Button Trigger */}
         <motion.button
           onClick={() => {
             setIsOpen(!isOpen);
@@ -294,28 +312,40 @@ export default function FloatingChat() {
               closeWelcomeTip();
             }
           }}
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
-          className={`pointer-events-auto relative w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 cursor-pointer ${
+          className={`pointer-events-auto flex items-center space-x-2.5 px-4 py-2.5 rounded-full shadow-2xl border cursor-pointer select-none group relative overflow-hidden transition-all duration-300 ${
             isOpen 
-              ? "bg-slate-900 hover:bg-slate-850 text-white ring-4 ring-slate-100" 
-              : "bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white shadow-blue-500/30"
+              ? "bg-slate-900 border-slate-700 text-white shadow-slate-900/40" 
+              : "bg-gradient-to-r from-blue-600 via-sky-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-sky-300/40 text-white shadow-sky-600/30"
           }`}
           id="btn-online-support-chat"
         >
-          {/* Pulse Green Ring to indicate online agent status */}
-          {!isOpen && (
-            <span className="absolute top-0 right-0 flex h-3.5 w-3.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white"></span>
-            </span>
-          )}
+          {/* Pulsing visual backdrop */}
+          <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full animate-pulse" />
 
-          {isOpen ? (
-            <X className="w-6 h-6 animate-spin-once" />
-          ) : (
-            <MessageSquare className="w-6 h-6" />
-          )}
+          <div className="relative shrink-0 flex items-center justify-center">
+            {isOpen ? (
+              <X className="w-5 h-5 text-white" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+            )}
+            {!isOpen && (
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border border-white"></span>
+              </span>
+            )}
+          </div>
+          
+          <div className="flex flex-col items-start leading-none">
+            <span className="text-[10px] uppercase font-extrabold tracking-wider text-sky-100">
+              {isOpen ? "Đóng Chat" : "Trợ Lý Áo AI"}
+            </span>
+            <span className="text-xs font-black tracking-tight flex items-center gap-1 font-mono">
+              {isOpen ? "Thu nhỏ" : "Hỏi Đáp 24/7"}
+            </span>
+          </div>
         </motion.button>
       </div>
 
@@ -613,3 +643,5 @@ export default function FloatingChat() {
     </>
   );
 }
+
+export default React.memo(FloatingChat);

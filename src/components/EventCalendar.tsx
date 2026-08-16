@@ -53,7 +53,7 @@ interface EventCalendarProps {
   events: CalendarEvent[];
 }
 
-export default function EventCalendar({ events = [] }: EventCalendarProps) {
+function EventCalendar({ events = [] }: EventCalendarProps) {
   const displayEvents = events.length > 0 ? events : EVENTS;
   
   // States for survey rotation
@@ -289,3 +289,5 @@ export default function EventCalendar({ events = [] }: EventCalendarProps) {
     </div>
   );
 }
+
+export default React.memo(EventCalendar);

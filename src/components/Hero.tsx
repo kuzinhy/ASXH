@@ -163,6 +163,10 @@ function Hero({ webConfig }: { webConfig: WebConfig | null }) {
             </a>
             <a 
               href="#ai-assistant" 
+              onClick={(e) => {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent('open-ai-chat', { detail: { prompt: "Dạ thưa Trợ lý AI, tôi cần thông tin hỗ trợ an sinh xã hội Phường Phú Lợi." } }));
+              }}
               className="w-full sm:w-auto bg-white hover:bg-primary-50 text-slate-900 font-black px-10 py-5 rounded-2xl transition-all duration-300 text-center flex items-center justify-center space-x-3 text-[11px] uppercase tracking-widest font-sans border-2 border-primary-100 shadow-sm hover:border-primary-200 active:scale-95 cursor-pointer"
             >
               <MessageSquare className="w-4.5 h-4.5 text-primary-600 shrink-0" />
