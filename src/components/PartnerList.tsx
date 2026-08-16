@@ -6,7 +6,7 @@ interface PartnerListProps {
   partners?: OfficialPartner[];
 }
 
-export default function PartnerList({ partners = [] }: PartnerListProps) {
+function PartnerList({ partners = [] }: PartnerListProps) {
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-[500px] flex flex-col relative overflow-hidden">
       <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -z-10" />
@@ -128,3 +128,5 @@ export default function PartnerList({ partners = [] }: PartnerListProps) {
     </div>
   );
 }
+
+export default React.memo(PartnerList);

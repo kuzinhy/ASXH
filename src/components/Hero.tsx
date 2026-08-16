@@ -152,22 +152,35 @@ function Hero({ webConfig }: { webConfig: WebConfig | null }) {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row justify-center lg:justify-start items-center gap-5 pt-4"
+            className="flex flex-wrap justify-center lg:justify-start items-center gap-3.5 pt-4"
           >
             <a 
               href="#services" 
-              className="w-full sm:w-auto bg-gradient-to-br from-primary-600 to-blue-700 hover:from-primary-700 hover:to-blue-800 text-white font-black px-10 py-5 rounded-2xl transition-all duration-300 text-center shadow-[0_15px_30px_-5px_rgba(37,99,235,0.4)] hover:shadow-[0_20px_35px_-5px_rgba(37,99,235,0.5)] flex items-center justify-center space-x-3 text-[11px] uppercase tracking-widest font-sans active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto bg-gradient-to-br from-primary-600 to-blue-700 hover:from-primary-700 hover:to-blue-800 text-white font-black px-7 py-4.5 rounded-2xl transition-all duration-300 text-center shadow-[0_15px_30px_-5px_rgba(37,99,235,0.4)] hover:shadow-[0_20px_35px_-5px_rgba(37,99,235,0.5)] flex items-center justify-center space-x-2.5 text-[11px] uppercase tracking-widest font-sans active:scale-95 cursor-pointer"
             >
               <Search className="w-4.5 h-4.5 shrink-0" />
               <span>Sử dụng Dịch vụ</span>
             </a>
+
+            <button 
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("trigger-kindness-heart"));
+              }}
+              className="w-full sm:w-auto bg-gradient-to-r from-red-500 via-rose-500 to-pink-600 hover:from-red-600 hover:via-rose-600 hover:to-pink-700 text-white font-black px-7 py-4.5 rounded-2xl transition-all duration-300 text-center shadow-[0_15px_30px_-5px_rgba(239,68,68,0.4)] hover:shadow-[0_20px_35px_-5px_rgba(239,68,68,0.5)] flex items-center justify-center space-x-2.5 text-[11px] uppercase tracking-widest font-sans active:scale-95 cursor-pointer group"
+              id="btn-hero-send-love"
+            >
+              <Heart className="w-4.5 h-4.5 fill-white text-white shrink-0 group-hover:scale-125 transition-transform duration-300" />
+              <span>Gửi Yêu Thương</span>
+            </button>
+
             <a 
               href="#ai-assistant" 
               onClick={(e) => {
                 e.preventDefault();
                 window.dispatchEvent(new CustomEvent('open-ai-chat', { detail: { prompt: "Dạ thưa Trợ lý AI, tôi cần thông tin hỗ trợ an sinh xã hội Phường Phú Lợi." } }));
               }}
-              className="w-full sm:w-auto bg-white hover:bg-primary-50 text-slate-900 font-black px-10 py-5 rounded-2xl transition-all duration-300 text-center flex items-center justify-center space-x-3 text-[11px] uppercase tracking-widest font-sans border-2 border-primary-100 shadow-sm hover:border-primary-200 active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto bg-white hover:bg-primary-50 text-slate-900 font-black px-7 py-4.5 rounded-2xl transition-all duration-300 text-center flex items-center justify-center space-x-2.5 text-[11px] uppercase tracking-widest font-sans border-2 border-primary-100 shadow-sm hover:border-primary-200 active:scale-95 cursor-pointer"
             >
               <MessageSquare className="w-4.5 h-4.5 text-primary-600 shrink-0" />
               <span>Hỏi Trợ lý ảo AI</span>

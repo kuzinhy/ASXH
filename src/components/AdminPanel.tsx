@@ -74,7 +74,7 @@ interface ActivityLog {
   type: "success" | "info" | "warning";
 }
 
-export default function AdminPanel({
+function AdminPanel({
   currentUser,
   onConfigChange,
   onCampaignsChange,
@@ -6956,3 +6956,5 @@ export default function AdminPanel({
     </>
   );
 }
+
+export default React.memo(AdminPanel);

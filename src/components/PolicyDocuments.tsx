@@ -3,7 +3,7 @@ import {
   BookOpen, FileText, Landmark, Scale, ChevronRight, Download, ExternalLink, Search, Filter, 
   X, Clock, Building, CheckCircle2, ArrowRight, AlertCircle, Calendar, User, FileCheck, Printer, Eye 
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { PolicyDocument } from '../types';
 
 // Mock data for policy documents

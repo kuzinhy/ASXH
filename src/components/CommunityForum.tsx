@@ -10,7 +10,7 @@ interface CommunityForumProps {
   onRequireAuth: () => void;
 }
 
-export default function CommunityForum({ currentUser, onRequireAuth }: CommunityForumProps) {
+function CommunityForum({ currentUser, onRequireAuth }: CommunityForumProps) {
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -431,3 +431,5 @@ export default function CommunityForum({ currentUser, onRequireAuth }: Community
     </div>
   );
 }
+
+export default React.memo(CommunityForum);

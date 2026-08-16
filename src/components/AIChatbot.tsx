@@ -10,7 +10,7 @@ import { ChatMessage, WebConfig } from "../types";
 import { db } from "../lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
-export default function AIChatbot({ webConfig }: { webConfig?: WebConfig | null }) {
+function AIChatbot({ webConfig }: { webConfig?: WebConfig | null }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "init-msg",
@@ -323,3 +323,5 @@ export default function AIChatbot({ webConfig }: { webConfig?: WebConfig | null 
     </section>
   );
 }
+
+export default React.memo(AIChatbot);

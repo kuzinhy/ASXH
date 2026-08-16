@@ -32,7 +32,7 @@ interface PushNotificationCenterProps {
   requests: CitizenRequest[];
 }
 
-export default function PushNotificationCenter({ onRequestsUpdated, requests }: PushNotificationCenterProps) {
+function PushNotificationCenter({ onRequestsUpdated, requests }: PushNotificationCenterProps) {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [token, setToken] = useState<string>("");
   const [vapidKey, setVapidKey] = useState<string>(DEFAULT_VAPID_KEY);
@@ -717,3 +717,5 @@ export default function PushNotificationCenter({ onRequestsUpdated, requests }: 
     </div>
   );
 }
+
+export default React.memo(PushNotificationCenter);

@@ -166,7 +166,7 @@ interface AuthModalProps {
   onAuthSuccess: (user: UserProfile) => void;
 }
 
-export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
+function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -887,3 +887,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     </div>
   );
 }
+
+export default React.memo(AuthModal);
+

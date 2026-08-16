@@ -13,7 +13,7 @@ interface NewsDetailModalProps {
   onShareClick: () => void;
 }
 
-export default function NewsDetailModal({
+function NewsDetailModal({
   isOpen,
   onClose,
   article,
@@ -173,3 +173,5 @@ export default function NewsDetailModal({
     </AnimatePresence>
   );
 }
+
+export default React.memo(NewsDetailModal);

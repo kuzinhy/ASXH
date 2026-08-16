@@ -4,7 +4,7 @@ import { ForumPost } from "../types";
 import { fetchForumPostsFromFirestore, saveForumPostToFirestore, deleteForumPostFromFirestore } from "../lib/firebaseSync";
 
 
-export default function AdminForumPanel() {
+function AdminForumPanel() {
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("Tất cả");
@@ -254,3 +254,5 @@ export default function AdminForumPanel() {
     </div>
   );
 }
+
+export default React.memo(AdminForumPanel);

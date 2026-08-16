@@ -13,7 +13,7 @@ interface ProfileModalProps {
   onUpdate: (updatedUser: UserProfile) => void;
 }
 
-export default function ProfileModal({ isOpen, onClose, currentUser, onUpdate }: ProfileModalProps) {
+function ProfileModal({ isOpen, onClose, currentUser, onUpdate }: ProfileModalProps) {
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState(currentUser.fullName || "");
   const [phone, setPhone] = useState(currentUser.phone || "");
@@ -286,3 +286,6 @@ export default function ProfileModal({ isOpen, onClose, currentUser, onUpdate }:
     </AnimatePresence>
   );
 }
+
+export default React.memo(ProfileModal);
+

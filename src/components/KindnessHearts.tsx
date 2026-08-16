@@ -140,7 +140,7 @@ function KindnessHearts({ news = [] }: KindnessHeartsProps) {
     }
   }, [news]);
 
-  const triggerLove = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const triggerLove = async (e?: React.MouseEvent<HTMLButtonElement>) => {
     // Optimistic update
     const newCount = loveCount + 1;
     setLoveCount(newCount);
@@ -187,6 +187,17 @@ function KindnessHearts({ news = [] }: KindnessHeartsProps) {
     }, 550);
   };
 
+  // Listen for global trigger-kindness-heart events (e.g. from Hero action buttons)
+  useEffect(() => {
+    const handleGlobalTrigger = () => {
+      triggerLove();
+    };
+    window.addEventListener("trigger-kindness-heart", handleGlobalTrigger);
+    return () => {
+      window.removeEventListener("trigger-kindness-heart", handleGlobalTrigger);
+    };
+  }, [loveCount]);
+
   const removeParticle = (id: number) => {
     setParticles((prev) => prev.filter((p) => p.id !== id));
   };
@@ -210,9 +221,8 @@ function KindnessHearts({ news = [] }: KindnessHeartsProps) {
 
   return (
     <>
+      {/* Floating particles layer */}
       <div className="fixed bottom-6 left-6 z-40 flex flex-col items-start pointer-events-none select-none">
-        
-        {/* Particles layer */}
         <div className="relative w-full h-0 overflow-visible">
           <AnimatePresence>
             {particles.map((p) => (
@@ -250,49 +260,6 @@ function KindnessHearts({ news = [] }: KindnessHeartsProps) {
             ))}
           </AnimatePresence>
         </div>
-
-        {/* Love/Encouragement Balloon Tip */}
-        <AnimatePresence>
-          {showQuoteTip && (
-            <motion.div
-              initial={{ opacity: 0, y: 15, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="bg-gradient-to-r from-red-500 to-rose-600 text-white font-black text-[11px] sm:text-xs py-2 px-4 rounded-2xl shadow-xl border border-red-400 mb-3.5 mr-2 max-w-xs text-center flex items-center space-x-2 shrink-0 pointer-events-auto"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300 shrink-0 animate-spin" />
-              <span>{activeQuote}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Sticky Floating Love Heart Button Trigger */}
-        <motion.button
-          onClick={triggerLove}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.92 }}
-          className="pointer-events-auto flex items-center space-x-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white font-extrabold px-4.5 py-3 rounded-full shadow-2xl shadow-red-500/30 border border-red-400/30 cursor-pointer select-none group relative overflow-hidden animate-bounce"
-          id="btn-kindness-heart"
-        >
-          {/* Pulsing visual backdrop */}
-          <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full animate-pulse" />
-
-          <motion.div
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-            className="shrink-0"
-          >
-            <Heart className="w-5 h-5 text-white fill-current" />
-          </motion.div>
-          
-          <div className="flex flex-col items-start leading-none">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-red-100">Gửi Yêu Thương</span>
-            <span className="text-xs font-black tracking-tight font-mono">
-              {(loveCount || 0).toLocaleString()} tim
-            </span>
-          </div>
-        </motion.button>
-
       </div>
 
       {/* Thank You & Sharing Popup Modal */}

@@ -12,7 +12,7 @@ interface ShareModalProps {
   showToast?: (title: string, message: string, type: "success" | "info" | "warning" | "error") => void;
 }
 
-export default function ShareModal({
+function ShareModal({
   isOpen,
   onClose,
   title,
@@ -224,3 +224,5 @@ export default function ShareModal({
     </AnimatePresence>
   );
 }
+
+export default React.memo(ShareModal);

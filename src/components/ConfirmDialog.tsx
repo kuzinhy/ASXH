@@ -12,7 +12,7 @@ interface ConfirmDialogProps {
   cancelText?: string;
 }
 
-export default function ConfirmDialog({
+function ConfirmDialog({
   isOpen,
   title,
   message,
@@ -66,3 +66,6 @@ export default function ConfirmDialog({
     </AnimatePresence>
   );
 }
+
+export default React.memo(ConfirmDialog);
+
